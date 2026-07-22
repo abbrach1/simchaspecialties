@@ -1,0 +1,662 @@
+<style>
+  :root{
+    --bg:#F5F8F7; --surface:#FFFFFF; --surface-2:#EEF3F1; --surface-3:#E4ECE9;
+    --ink:#16221F; --ink-soft:#54635F; --ink-faint:#859590; --line:#DBE5E1;
+    --accent:#0E8C84; --accent-strong:#0A6B65; --accent-wash:#E4F1EF;
+    --free:#178A55; --free-bg:#E6F4EC; --free-line:#B7E0C7;
+    --busy:#BD4E37; --busy-bg:#FBEBE6; --busy-line:#F0CBBF;
+    --standing:#9A6B1F; --standing-bg:#FBF1DE;
+    --shadow:0 1px 2px rgba(16,40,36,.05),0 8px 24px rgba(16,40,36,.06);
+    --radius:14px;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0F1514; --surface:#161F1D; --surface-2:#1D2725; --surface-3:#25322F;
+      --ink:#E7EEEB; --ink-soft:#9CAFAA; --ink-faint:#6C7C77; --line:#2A3734;
+      --accent:#34B8AE; --accent-strong:#4CCabf; --accent-wash:#14312E;
+      --free:#4BC488; --free-bg:#12291E; --free-line:#25452F;
+      --busy:#E6866B; --busy-bg:#2C1913; --busy-line:#4A2A20;
+      --standing:#D9A94E; --standing-bg:#2C2410;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F5F8F7; --surface:#FFFFFF; --surface-2:#EEF3F1; --surface-3:#E4ECE9;
+    --ink:#16221F; --ink-soft:#54635F; --line:#DBE5E1;
+    --accent:#0E8C84; --accent-strong:#0A6B65; --accent-wash:#E4F1EF;
+    --free:#178A55; --free-bg:#E6F4EC; --free-line:#B7E0C7;
+    --busy:#BD4E37; --busy-bg:#FBEBE6; --busy-line:#F0CBBF;
+    --standing:#9A6B1F; --standing-bg:#FBF1DE;
+    --shadow:0 1px 2px rgba(16,40,36,.05),0 8px 24px rgba(16,40,36,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0F1514; --surface:#161F1D; --surface-2:#1D2725; --surface-3:#25322F;
+    --ink:#E7EEEB; --ink-soft:#9CAFAA; --ink-faint:#6C7C77; --line:#2A3734;
+    --accent:#34B8AE; --accent-strong:#4CCabf; --accent-wash:#14312E;
+    --free:#4BC488; --free-bg:#12291E; --free-line:#25452F;
+    --busy:#E6866B; --busy-bg:#2C1913; --busy-line:#4A2A20;
+    --standing:#D9A94E; --standing-bg:#2C2410;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.5;-webkit-font-smoothing:antialiased;font-size:15px}
+  .wrap{max-width:1120px;margin:0 auto;padding:22px 20px 80px}
+  a{color:var(--accent-strong)}
+  h1,h2,h3{margin:0;text-wrap:balance}
+  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:700}
+
+  /* Header */
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:13px}
+  .logo{width:42px;height:42px;border-radius:12px;flex:none;
+    background:linear-gradient(150deg,var(--accent),var(--accent-strong));
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:19px;
+    box-shadow:var(--shadow)}
+  .brand h1{font-size:20px;letter-spacing:-.01em;font-weight:750}
+  .brand .sub{color:var(--ink-soft);font-size:12.5px;margin-top:1px}
+  .daybadge{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:8px 14px;box-shadow:var(--shadow);text-align:right}
+  .daybadge .d1{font-weight:700;font-size:13.5px}
+  .daybadge .d2{color:var(--ink-soft);font-size:11.5px}
+
+  /* Tabs */
+  .tabs{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:12px;
+    width:fit-content;margin-bottom:20px;border:1px solid var(--line)}
+  .tab{appearance:none;border:0;background:transparent;color:var(--ink-soft);
+    font:inherit;font-weight:650;font-size:13.5px;padding:8px 16px;border-radius:9px;
+    cursor:pointer;transition:.15s}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{background:var(--surface);color:var(--accent-strong);
+    box-shadow:var(--shadow)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .panel{display:none;animation:fade .2s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.panel,*{animation:none!important}}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow)}
+  .pad{padding:18px}
+
+  /* Finder layout */
+  .finder{display:grid;grid-template-columns:288px 1fr;gap:18px;align-items:start}
+  @media (max-width:820px){.finder{grid-template-columns:1fr}}
+
+  .slotlist{display:flex;flex-direction:column;gap:8px}
+  .slotlist .eyebrow{margin:2px 2px 6px}
+  .slotbtn{text-align:left;width:100%;border:1px solid var(--line);background:var(--surface);
+    border-radius:11px;padding:11px 13px;cursor:pointer;font:inherit;transition:.15s;
+    display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .slotbtn:hover{border-color:var(--accent);background:var(--accent-wash)}
+  .slotbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-wash);
+    box-shadow:inset 3px 0 0 var(--accent)}
+  .slotbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .slotbtn .st{font-weight:700;font-size:14px}
+  .slotbtn .sm{color:var(--ink-soft);font-size:11.5px;margin-top:1px}
+  .slotbtn .cnt{font-family:var(--mono);font-size:12px;color:var(--free);font-weight:700;
+    background:var(--free-bg);border:1px solid var(--free-line);padding:2px 7px;border-radius:20px;
+    flex:none}
+
+  /* Result */
+  .resulthead{display:flex;flex-wrap:wrap;gap:14px;align-items:center;
+    justify-content:space-between;margin-bottom:2px}
+  .resulthead h2{font-size:17px;letter-spacing:-.01em}
+  .bigcount{display:flex;align-items:baseline;gap:8px}
+  .bigcount .n{font-size:34px;font-weight:800;color:var(--free);
+    font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .bigcount .lbl{color:var(--ink-soft);font-size:13px}
+  .runbar{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 4px}
+  .chip{font-size:12px;padding:3px 10px;border-radius:20px;border:1px solid var(--line);
+    background:var(--surface-2);color:var(--ink-soft);font-weight:600;white-space:nowrap}
+  .chip.special{background:var(--busy-bg);border-color:var(--busy-line);color:var(--busy)}
+  .chip.special::before{content:"★ "}
+
+  .sectlabel{display:flex;align-items:center;gap:9px;margin:20px 0 11px}
+  .sectlabel .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .sectlabel .dot.g{background:var(--free)} .sectlabel .dot.r{background:var(--busy)}
+  .sectlabel .dot.a{background:var(--standing)}
+  .sectlabel h3{font-size:13.5px}
+  .sectlabel .ct{color:var(--ink-faint);font-size:12px;font-weight:600;
+    font-variant-numeric:tabular-nums}
+
+  .people{display:flex;flex-wrap:wrap;gap:7px}
+  .person{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:10px;
+    font-size:13px;font-weight:600;border:1px solid var(--free-line);background:var(--free-bg);
+    color:var(--ink)}
+  .person .role{font-size:10.5px;font-weight:700;color:var(--free);
+    text-transform:uppercase;letter-spacing:.04em}
+  .person.standing{background:var(--standing-bg);border-color:transparent;opacity:.9}
+  .person.standing .role{color:var(--standing)}
+  .busygroup{border:1px solid var(--busy-line);background:var(--busy-bg);border-radius:12px;
+    padding:11px 13px;margin-bottom:9px}
+  .busygroup .bh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    margin-bottom:7px}
+  .busygroup .bh b{font-size:13.5px;color:var(--busy)}
+  .busygroup .bh .where{font-size:11.5px;color:var(--ink-soft)}
+  .busygroup .people .person{background:var(--surface);border-color:var(--busy-line)}
+  .busygroup .people .person .role{color:var(--busy)}
+  .empty{color:var(--ink-faint);font-size:13px;padding:6px 2px;font-style:italic}
+
+  /* Schedule table */
+  .scroll{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line)}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left}
+  thead th{background:var(--surface-2);font-size:11.5px;letter-spacing:.03em;
+    position:sticky;top:0;white-space:nowrap}
+  tbody th{background:var(--surface-2);font-weight:700;white-space:nowrap;font-size:12.5px}
+  td .act{display:inline-block;background:var(--accent-wash);color:var(--accent-strong);
+    border:1px solid transparent;border-radius:7px;padding:2px 8px;margin:2px 3px 2px 0;
+    font-size:12px;font-weight:650}
+  td .act.sp{background:var(--busy-bg);color:var(--busy)}
+  td .act.un{background:var(--standing-bg);color:var(--standing)}
+
+  /* Roster */
+  .rosgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .wksp{padding:14px}
+  .wksp h3{font-size:14.5px;display:flex;align-items:center;gap:8px}
+  .wksp .loc{font-size:11.5px;color:var(--ink-faint);font-weight:600;margin-top:1px}
+  .wksp .tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+    padding:2px 7px;border-radius:20px;background:var(--accent-wash);color:var(--accent-strong)}
+  .wksp .tag.st{background:var(--standing-bg);color:var(--standing)}
+  .wksp .people{margin-top:10px}
+  .wksp .person{background:var(--surface-2);border-color:var(--line);cursor:default}
+  .wksp .person .x{cursor:pointer;color:var(--ink-faint);font-weight:800;margin-left:2px;
+    padding:0 2px;border-radius:4px}
+  .wksp .person .x:hover{color:var(--busy)}
+  .wksp .person .star{color:var(--accent)}
+  .addrow{display:flex;gap:6px;margin-top:10px}
+  input[type=text],select,textarea{font:inherit;font-size:13px;color:var(--ink);
+    background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 10px;
+    width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;
+    border-color:var(--accent)}
+  button.btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+    font:inherit;font-weight:650;font-size:13px;padding:7px 14px;border-radius:9px;cursor:pointer;
+    transition:.15s;white-space:nowrap}
+  button.btn:hover{border-color:var(--accent);color:var(--accent-strong)}
+  button.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.btn.primary:hover{background:var(--accent-strong);color:#fff}
+  button.btn.sm{padding:5px 10px;font-size:12px}
+  button.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:16px}
+  .toolbar .grow{flex:1}
+  .note{font-size:12.5px;color:var(--ink-soft);background:var(--surface-2);
+    border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:14px}
+  .note b{color:var(--ink)}
+  details.imp{margin-top:14px;border:1px dashed var(--line);border-radius:12px;padding:0}
+  details.imp summary{cursor:pointer;padding:12px 14px;font-weight:650;font-size:13.5px}
+  details.imp .body{padding:0 14px 14px}
+  textarea{min-height:150px;font-family:var(--mono);font-size:12px;resize:vertical}
+  .msg{font-size:12.5px;font-weight:600;margin-left:4px}
+  .msg.ok{color:var(--free)} .msg.err{color:var(--busy)}
+  .foot{margin-top:26px;color:var(--ink-faint);font-size:12px;text-align:center}
+  .kbd{font-family:var(--mono);font-size:11px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 5px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">CS</div>
+      <div>
+        <div class="eyebrow">Camp Simcha · Specialty Division</div>
+        <h1>Coverage Planner</h1>
+        <div class="sub" id="daysub">Find who's free to cover a special activity</div>
+      </div>
+    </div>
+    <div class="daybadge">
+      <div class="d1" id="dayName">—</div>
+      <div class="d2">Editable · saved on this device</div>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" aria-selected="true" data-panel="finder">Coverage Finder</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="schedule">Day Schedule</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="roster">Roster</button>
+  </div>
+
+  <!-- FINDER -->
+  <section class="panel active" id="finder" role="tabpanel">
+    <div class="finder">
+      <div class="slotlist" id="slotlist"></div>
+      <div class="card pad" id="result"></div>
+    </div>
+  </section>
+
+  <!-- SCHEDULE -->
+  <section class="panel" id="schedule" role="tabpanel">
+    <div class="note">
+      This is today's schedule. To load a new day, open <b>Paste a day from a photo</b> below —
+      send me the schedule picture in chat and I'll give you a code to paste here.
+    </div>
+    <div class="scroll"><table id="schedTable"></table></div>
+    <details class="imp">
+      <summary>＋ Paste a day from a photo · or reset</summary>
+      <div class="body">
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:.4em 0 .8em">
+          Paste a schedule code here and press <b>Load day</b>. It replaces the current day's grid.
+        </p>
+        <textarea id="importBox" placeholder='{"dayName":"...", "slots":[ ... ]}' spellcheck="false"></textarea>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn primary" id="loadBtn">Load day</button>
+          <button class="btn" id="exportBtn">Copy current day as code</button>
+          <button class="btn" id="resetBtn">Reset to sample day</button>
+          <span class="msg" id="impMsg"></span>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ROSTER -->
+  <section class="panel" id="roster" role="tabpanel">
+    <div class="toolbar" style="gap:14px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="eyebrow">Session</span>
+        <select id="sessionSel" style="width:auto;min-width:150px;font-weight:650"></select>
+      </div>
+      <button class="btn sm" id="newSessBtn">＋ New</button>
+      <button class="btn sm" id="renSessBtn">Rename</button>
+      <button class="btn sm" id="dupSessBtn">Duplicate</button>
+      <button class="btn sm" id="delSessBtn">Delete</button>
+      <span class="grow"></span>
+      <button class="btn sm" id="resetRosterBtn">Reset this session to default list</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="rosSearch" class="grow" placeholder="Search a name or workshop…" style="max-width:340px">
+    </div>
+    <div class="note" id="rosterStats">—</div>
+    <div class="rosgrid" id="rosGrid"></div>
+    <div class="card pad" style="margin-top:16px">
+      <div class="eyebrow" style="margin-bottom:10px">Add a workshop or crew</div>
+      <div class="addrow" style="max-width:520px">
+        <input type="text" id="newWkspName" placeholder="Workshop / crew name">
+        <select id="newWkspType" style="width:auto"><option value="specialty">Specialty</option><option value="standing">Standing crew</option></select>
+        <button class="btn primary" id="addWkspBtn">Add</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    Built for the Specialty Division · Free = not assigned to any workshop running in that slot.
+    Standing crews are shown dimmed since they hold fixed duties — pull them only if needed.
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- DEFAULT DATA (from the specialty list) ---------- */
+const H="head", A="asst";
+function defaultRoster(){return [
+ {name:"AI 3D",type:"specialty",loc:"LEGO",people:[["Shua Greenberg",H],["Pacey Jacoby",A],["Minzer",A]]},
+ {name:"Arts 'n Crafts",type:"specialty",loc:"Castle A&C",people:[["Aviva Feiner",H],["Chaim Stern",A],["Moshe Hollander",A],["Avi Levy",A],["Tzvi Reichmann",A]]},
+ {name:"Baking",type:"specialty",loc:"Castle Baking",people:[["Shimi Lamm",A],["Yaakov Rothstein",A]]},
+ {name:"Candles",type:"specialty",loc:"Candle shop",people:[["Avi Lowenthal",H],["Aaron Meir Lowenthal",A],["Shimon Segal",A],["Yehuda Levi",A],["Avi Ambinder",A],["Daniel Singer",A],["EJ Erber",A]]},
+ {name:"Cheers",type:"specialty",loc:"LL Castle 4",people:[["Yaakov Levenbrown",H],["Rami Harari",A]]},
+ {name:"Ductigami",type:"specialty",loc:"Matts Front",people:[["Adina Feinstein",H],["Moshe Kreiser",A],["Akiva Schwebel",A]]},
+ {name:"Flight School / Rocketry",type:"specialty",loc:"LL2",people:[["Benjamin BenDayan",H],["Benny Rekant",A]]},
+ {name:"Glass Fusion",type:"specialty",loc:"CS 3&4",people:[["Shani Farkas",H],["Refoel Sax",A],["Yoni Solomon",A]]},
+ {name:"Laser Engraving",type:"specialty",loc:"CS 1",people:[["Mimi Feiler",H],["Motti Eberstark",A],["Moshe Feinstein",A]]},
+ {name:"Leather",type:"specialty",loc:"Old AC",people:[["Dovid Kurzman",H],["Nachi Tajerstein",A]]},
+ {name:"LEGO",type:"specialty",loc:"LEGO",people:[["Zev Wiesel",A]]},
+ {name:"Metal Impressions",type:"specialty",loc:"LL3",people:[["Yaakov Lewittes",A],["Sami Klein",A]]},
+ {name:"Needle Punch Art",type:"specialty",loc:"LEGO",people:[["Masha Schore",H],["Yoni Cherns",A],["Yehuda Rothberger",A]]},
+ {name:"Pottery",type:"specialty",loc:"Katz Pot Shop",people:[["Shifra Zeiler",H],["Naor Davidovitch",A],["Yosef Treizman",A],["Sid Zacharia",A],["Yoni Klein",A]]},
+ {name:"Resin",type:"specialty",loc:"—",people:[["Devora Stok",H],["Yoni Cherns",A],["Yehuda Rothberger",A]]},
+ {name:"Ropes Course",type:"specialty",loc:"Ropes",people:[["Zev Wiesel",A],["Netanel Perez",A],["Coby Soffer",A],["Menachem Sprung",A],["Benny London",A],["Yekutiel Feiler",A],["Avraham Katz",A]]},
+ {name:"Slice",type:"specialty",loc:"LL Castle 3",people:[["Shimi Lamm",A],["Yaakov Rothstein",A]]},
+ {name:"Wired",type:"specialty",loc:"LL1",people:[["Ezra Englander",A],["Binyomin Bodner",A]]},
+ {name:"Sports",type:"specialty",loc:"Pavilion",people:[["Pacey Jacoby",A]]},
+ {name:"Water Wars",type:"specialty",loc:"—",people:[["David Rosen",H],["Akiva Brafman",A]]},
+ {name:"Woodburning",type:"specialty",loc:"Matts Rt Back",people:[["Shia Wallach",H],["Avraham Goldfield",A]]},
+ {name:"Woodworking",type:"specialty",loc:"Wood",people:[["Dovi Berkes",H],["Yehuda Schmidt",H],["Shlomo Shinensky",A],["Joey Sosnick",A]]},
+ {name:"Yoga / Meditation",type:"specialty",loc:"—",people:[["Pacey Jacoby",A]]},
+ {name:"Night Crew",type:"standing",loc:"nights",people:[["Abie Brachfeld",A],["Dovi Berkes",A],["Yehuda Schmidt",A],["Aaron Meir Lowenthal",A]]},
+ {name:"Swim",type:"standing",loc:"Lake",people:[["Bentzy Boyer",A]]},
+ {name:"Lake / Boats",type:"standing",loc:"Lake",people:[["Tzvi Schwab",A]]},
+ {name:"Fishing",type:"standing",loc:"Lake",people:[["Jonah Cohen",A],["Yermi Kirschenbaum",A]]},
+ {name:"Office",type:"standing",loc:"Office",people:[["Nava Rosenberg",H],["Sinai Roth",A],["Yehuda Brody",A],["Moshe Hollander",A]]},
+ {name:"Canteen",type:"standing",loc:"Canteen",people:[["Ami Swerdlik",A],["Yechiel Yablonsky",A],["Yaakov Oratz",A]]},
+ {name:"Recording Studio",type:"standing",loc:"Studio",people:[["Shloime Cytryn",A]]},
+ {name:"Maintenance",type:"standing",loc:"Camp",people:[["Yoni Rosenberg",H],["Asher Kasnett",A],["Koby Eisenberg",A],["Gabi Schick",A],["Moshe Kaplan",A],["Moshe Koritz",A]]},
+ {name:"Costume Closet / Xbox",type:"standing",loc:"—",people:[["Shmuel Berg",A],["Tzvi Muller",A]]},
+ {name:"DJ",type:"standing",loc:"—",people:[["Tzvi",A]]},
+];}
+
+/* schedule cell text -> workshop name in roster */
+const ALIAS={
+ "ai 3d":"AI 3D","arts & crafts":"Arts 'n Crafts","arts 'n crafts":"Arts 'n Crafts",
+ "arts and crafts":"Arts 'n Crafts","woodburning":"Woodburning","wired":"Wired",
+ "water wars":"Water Wars","wood working":"Woodworking","woodworking":"Woodworking",
+ "laser engraving":"Laser Engraving","glass fusion":"Glass Fusion","leather":"Leather",
+ "cheers":"Cheers","sports: soccer":"Sports","sports":"Sports","soccer":"Sports",
+ "pottery glazing":"Pottery","pottery":"Pottery","ropes course":"Ropes Course",
+ "ductagami":"Ductigami","ductigami":"Ductigami","resinate":"Resin","resin":"Resin",
+ "metal impressions":"Metal Impressions","candles":"Candles","baking":"Baking","slice":"Slice",
+ "needle punch":"Needle Punch Art","yoga":"Yoga / Meditation",
+};
+/* activities that need coverage themselves (no assigned crew) */
+const SPECIAL=["clue","carnival","dodgeball","color war","concert","trip","chagigah","bbq","free play","swim gala"];
+const BREAKS=["lunch","breakfast","dinner","supper","seuda","rest","shachris","maariv","mincha","davening","learning"];
+
+function defaultSchedule(){return {
+ dayName:"Wednesday, July 22 · ח׳ אב",
+ groups:["Dovid's Spicy Lion Cubs","Dovi's De' Amigos","Tzvi's Seals","Zalmy's Parentches","Yaakov's","Boys Day Camp","Regular Day Camp"],
+ slots:[
+  {id:"carnival",time:"11:00–12:55",label:"Carnival",entries:[
+    {g:0,a:"Carnival at the Pavilion"},{g:1,a:"Carnival at the Pavilion"},{g:2,a:"Carnival at the Pavilion"},
+    {g:3,a:"Carnival at the Pavilion"},{g:4,a:"Carnival at the Pavilion"}]},
+  {id:"p1",time:"2:00–3:00",label:"Period 1",entries:[
+    {g:0,a:"CLUE"},{g:1,a:"Woodburning"},{g:1,a:"Wired"},{g:2,a:"Water Wars"},{g:2,a:"Wood Working"},
+    {g:3,a:"Laser Engraving"},{g:3,a:"Glass Fusion"},{g:4,a:"Arts & Crafts"},{g:4,a:"AI 3D"}]},
+  {id:"p2",time:"3:00–4:00",label:"Period 2",entries:[
+    {g:0,a:"Leather"},{g:0,a:"Cheers"},{g:1,a:"CLUE"},{g:2,a:"Sports: Soccer"},{g:3,a:"Pottery Glazing"},
+    {g:4,a:"Ropes Course"},{g:4,a:"Wired"},{g:6,a:"Ductagami"}]},
+  {id:"p3",time:"4:00–4:50",label:"Period 3",entries:[
+    {g:0,a:"Laser Engraving"},{g:0,a:"Ductagami"},{g:1,a:"Leather"},{g:1,a:"Pottery Glazing"},{g:2,a:"CLUE"},
+    {g:3,a:"Resinate"},{g:3,a:"Ropes Course"},{g:4,a:"Glass Fusion"},{g:4,a:"Metal Impressions"},{g:5,a:"Arts & Crafts"}]},
+  {id:"p4",time:"4:50–5:45",label:"Period 4",entries:[
+    {g:0,a:"Pottery Glazing"},{g:0,a:"Ropes Course"},{g:1,a:"Metal Impressions"},{g:1,a:"Resinate"},
+    {g:2,a:"Ductagami"},{g:2,a:"Water Wars"},{g:3,a:"CLUE"},{g:4,a:"Dodgeball in the Pavillion"},{g:5,a:"Candles"}]},
+ ]
+};}
+
+/* ---------- STATE ---------- */
+const LS="campSimchaCoverage_v1";
+const clone=o=>JSON.parse(JSON.stringify(o));
+let state=load()||{};
+// migrate / initialise sessions
+if(!state.schedule) state.schedule=defaultSchedule();
+if(!state.sessions){
+  const base=state.roster||defaultRoster();
+  state.sessions={"Session 1":clone(base)};
+  state.activeSession="Session 1";
+}
+if(!state.activeSession||!state.sessions[state.activeSession])
+  state.activeSession=Object.keys(state.sessions)[0];
+// live working roster = a live reference into the active session
+state.roster=state.sessions[state.activeSession];
+delete state.__legacy;
+let selectedSlot=state.schedule.slots.find(s=>s.id==="p1")?"p1":state.schedule.slots[0]?.id;
+
+function save(){
+  // keep the active session snapshot in sync with the working roster
+  state.sessions[state.activeSession]=state.roster;
+  try{localStorage.setItem(LS,JSON.stringify({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule}))}catch(e){}
+}
+function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
+
+/* ---------- SESSIONS ---------- */
+function switchSession(name){
+  if(!state.sessions[name])return;
+  state.activeSession=name; state.roster=state.sessions[name];
+  save(); render();
+}
+function renderSessionBar(){
+  const sel=document.getElementById("sessionSel"); if(!sel)return;
+  sel.innerHTML=Object.keys(state.sessions).map(n=>
+    `<option ${n===state.activeSession?"selected":""}>${esc(n)}</option>`).join("");
+}
+function uniqueName(base){
+  let n=base,i=2; while(state.sessions[n]){n=base+" "+i;i++;} return n;
+}
+
+/* ---------- HELPERS ---------- */
+function norm(s){return (s||"").toLowerCase().replace(/\s+/g," ").trim();}
+function classify(act){
+  const n=norm(act);
+  if(!n) return {kind:"none"};
+  if(ALIAS[n]) return {kind:"workshop",name:ALIAS[n]};
+  for(const k in ALIAS){ if(n.startsWith(k)) return {kind:"workshop",name:ALIAS[k]}; }
+  if(SPECIAL.some(w=>n.includes(w))) return {kind:"special"};
+  if(BREAKS.some(w=>n.includes(w))) return {kind:"break"};
+  // try exact roster name
+  const w=state.roster.find(x=>norm(x.name)===n);
+  if(w) return {kind:"workshop",name:w.name};
+  return {kind:"unknown"};
+}
+function allPeople(){
+  const m=new Map(); // name -> {name, workshops:Set, standing:bool}
+  state.roster.forEach(w=>w.people.forEach(([nm,role])=>{
+    if(!m.has(nm)) m.set(nm,{name:nm,workshops:[],standing:false,onlyStanding:true});
+    const e=m.get(nm); e.workshops.push({w:w.name,role,type:w.type});
+    if(w.type==="standing") e.standing=true; else e.onlyStanding=false;
+  }));
+  return m;
+}
+function slotById(id){return state.schedule.slots.find(s=>s.id===id);}
+
+/* compute free/busy for a slot */
+function analyze(slot){
+  const running=new Map(); // workshop name -> Set of groups
+  const specials=[]; const unknowns=[];
+  slot.entries.forEach(e=>{
+    const c=classify(e.a);
+    if(c.kind==="workshop"){ if(!running.has(c.name)) running.set(c.name,new Set());
+      running.get(c.name).add(state.schedule.groups[e.g]??("Group "+e.g)); }
+    else if(c.kind==="special"){ if(!specials.includes(e.a)) specials.push(e.a); }
+    else if(c.kind==="unknown"){ if(!unknowns.includes(e.a)) unknowns.push(e.a); }
+  });
+  const people=allPeople();
+  const busyBy=new Map(); // name -> workshop that makes them busy
+  running.forEach((groups,wname)=>{
+    const w=state.roster.find(x=>x.name===wname); if(!w) return;
+    w.people.forEach(([nm])=>{ if(!busyBy.has(nm)) busyBy.set(nm,wname); });
+  });
+  const free=[],freeStanding=[],busy=new Map();
+  people.forEach(p=>{
+    if(busyBy.has(p.name)){
+      const wn=busyBy.get(p.name);
+      if(!busy.has(wn)) busy.set(wn,[]); busy.get(wn).push(p);
+    } else if(p.onlyStanding){ freeStanding.push(p); }
+    else free.push(p);
+  });
+  const byName=(a,b)=>a.name.localeCompare(b.name);
+  free.sort(byName); freeStanding.sort(byName);
+  return {running,specials,unknowns,free,freeStanding,busy,total:people.size};
+}
+
+/* ---------- RENDER: FINDER ---------- */
+function render(){
+  document.getElementById("dayName").textContent=state.schedule.dayName||"Today";
+  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster();
+}
+function renderSlotList(){
+  const el=document.getElementById("slotlist");
+  el.innerHTML='<div class="eyebrow">Pick a time slot</div>';
+  state.schedule.slots.forEach(s=>{
+    const a=analyze(s);
+    const freeN=a.free.length;
+    const b=document.createElement("button");
+    b.className="slotbtn"; b.setAttribute("aria-pressed", s.id===selectedSlot);
+    b.innerHTML=`<span><span class="st">${esc(s.time||s.label)}</span>`+
+      `<span class="sm">${esc(s.label||"")}${a.specials.length?" · ★ "+a.specials.length+" special":""}</span></span>`+
+      `<span class="cnt">${freeN} free</span>`;
+    b.onclick=()=>{selectedSlot=s.id;renderSlotList();renderResult();};
+    el.appendChild(b);
+  });
+}
+function personChip(p,{busy=false}={}){
+  const wl=p.workshops.map(x=>x.w);
+  const primary=p.workshops[0];
+  const cls=p.onlyStanding?"person standing":"person"+(busy?"":"");
+  const role=p.onlyStanding?"crew":(primary.role===H?"head":"");
+  return `<span class="${cls}" title="${esc(wl.join(", "))}">`+
+    (role?`<span class="role">${role}</span>`:"")+esc(p.name)+`</span>`;
+}
+function renderResult(){
+  const el=document.getElementById("result");
+  const slot=slotById(selectedSlot);
+  if(!slot){el.innerHTML='<div class="empty">No slot selected.</div>';return;}
+  const a=analyze(slot);
+  const specialsHtml=a.specials.length
+    ? a.specials.map(s=>`<span class="chip special">${esc(s)}</span>`).join("")
+    : `<span class="chip">No special activity flagged</span>`;
+  const runHtml=[...a.running.keys()].sort().map(w=>`<span class="chip">${esc(w)}</span>`).join("")||`<span class="chip">No workshops running</span>`;
+  const unkHtml=a.unknowns.length?`<div class="note" style="margin:12px 0 0">⚠ Not matched to the roster (treated as no-crew): <b>${a.unknowns.map(esc).join(", ")}</b>. Add these in the Roster tab if they use specialty staff.</div>`:"";
+
+  el.innerHTML=`
+    <div class="resulthead">
+      <div>
+        <div class="eyebrow">${esc(slot.time||"")} · ${esc(slot.label||"")}</div>
+        <h2>Who can cover</h2>
+      </div>
+      <div class="bigcount"><span class="n">${a.free.length}</span><span class="lbl">specialty staff free<br>of ${a.total} total</span></div>
+    </div>
+    <div>
+      <div class="eyebrow" style="margin:14px 0 6px">Special activities this slot</div>
+      <div class="runbar">${specialsHtml}</div>
+      <div class="eyebrow" style="margin:14px 0 6px">Workshops running (staff are busy)</div>
+      <div class="runbar">${runHtml}</div>
+      ${unkHtml}
+    </div>
+
+    <div class="sectlabel"><span class="dot g"></span><h3>Free — pull these first</h3><span class="ct">${a.free.length}</span></div>
+    <div class="people">${a.free.map(p=>personChip(p)).join("")||'<span class="empty">Nobody free — every specialty person is in a running workshop.</span>'}</div>
+
+    <div class="sectlabel"><span class="dot a"></span><h3>Standing crew — free of workshops, but hold fixed duties</h3><span class="ct">${a.freeStanding.length}</span></div>
+    <div class="people">${a.freeStanding.map(p=>personChip(p)).join("")||'<span class="empty">None.</span>'}</div>
+
+    <div class="sectlabel"><span class="dot r"></span><h3>Busy — assigned to a running workshop</h3><span class="ct">${[...a.busy.values()].reduce((n,x)=>n+x.length,0)}</span></div>
+    <div>${[...a.busy.entries()].sort((x,y)=>x[0].localeCompare(y[0])).map(([wn,ppl])=>{
+        const groups=[...(a.running.get(wn)||[])].join(", ");
+        return `<div class="busygroup"><div class="bh"><b>${esc(wn)}</b><span class="where">${esc(groups)}</span></div>`+
+          `<div class="people">${ppl.map(p=>personChip(p,{busy:true})).join("")}</div></div>`;
+      }).join("")||'<div class="empty">No workshops running this slot — everyone is free.</div>'}</div>
+  `;
+}
+
+/* ---------- RENDER: SCHEDULE ---------- */
+function renderSchedule(){
+  const sc=state.schedule, t=document.getElementById("schedTable");
+  let h="<thead><tr><th>Time</th>";
+  sc.groups.forEach((g,i)=>h+=`<th>${esc(g)}</th>`);
+  h+="</tr></thead><tbody>";
+  sc.slots.forEach(s=>{
+    h+=`<tr><th>${esc(s.time||"")}<br><span style="font-weight:500;color:var(--ink-faint)">${esc(s.label||"")}</span></th>`;
+    sc.groups.forEach((g,gi)=>{
+      const acts=s.entries.filter(e=>e.g===gi);
+      h+="<td>"+acts.map(e=>{
+        const c=classify(e.a);
+        const cls=c.kind==="special"?"act sp":(c.kind==="unknown"?"act un":"act");
+        return `<span class="${cls}">${esc(e.a)}</span>`;
+      }).join("")+"</td>";
+    });
+    h+="</tr>";
+  });
+  t.innerHTML=h+"</tbody>";
+}
+
+/* ---------- RENDER: ROSTER ---------- */
+function renderRoster(){
+  const q=norm(document.getElementById("rosSearch")?.value||"");
+  const grid=document.getElementById("rosGrid");
+  const ppl=allPeople();
+  document.getElementById("rosterStats").innerHTML=
+    `Editing <b>${esc(state.activeSession)}</b> — <b>${ppl.size}</b> people across <b>${state.roster.length}</b> workshops & crews. `+
+    `Click ✕ to remove someone; type a name and Enter to add. Everything saves automatically to this session.`;
+  grid.innerHTML="";
+  state.roster.forEach((w,wi)=>{
+    const match=!q||norm(w.name).includes(q)||w.people.some(([n])=>norm(n).includes(q));
+    if(!match) return;
+    const card=document.createElement("div");
+    card.className="card wksp";
+    card.innerHTML=`<h3>${esc(w.name)} <span class="tag ${w.type==="standing"?"st":""}">${w.type==="standing"?"crew":"specialty"}</span></h3>`+
+      `<div class="loc">${esc(w.loc||"")}</div>`+
+      `<div class="people">${w.people.map(([n,r],pi)=>
+        `<span class="person">${r===H?'<span class="star">★</span>':''}${esc(n)}<span class="x" data-w="${wi}" data-p="${pi}" title="Remove">✕</span></span>`).join("")}</div>`+
+      `<div class="addrow"><input type="text" placeholder="Add person…" data-addw="${wi}"><button class="btn sm" data-addbtn="${wi}">Add</button></div>`;
+    grid.appendChild(card);
+  });
+  grid.querySelectorAll(".x").forEach(x=>x.onclick=()=>{
+    const wi=+x.dataset.w,pi=+x.dataset.p; state.roster[wi].people.splice(pi,1);
+    if(!state.roster[wi].people.length) state.roster.splice(wi,1);
+    save();renderRoster();renderSlotList();renderResult();
+  });
+  grid.querySelectorAll("[data-addbtn]").forEach(b=>b.onclick=()=>addPerson(+b.dataset.addbtn));
+  grid.querySelectorAll("[data-addw]").forEach(inp=>inp.onkeydown=e=>{if(e.key==="Enter")addPerson(+inp.dataset.addw);});
+}
+function addPerson(wi){
+  const inp=document.querySelector(`[data-addw="${wi}"]`); const v=inp.value.trim();
+  if(!v)return; state.roster[wi].people.push([v,A]); inp.value="";
+  save();renderRoster();renderSlotList();renderResult();
+}
+
+/* ---------- TABS ---------- */
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t===tab));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===tab.dataset.panel));
+  };
+});
+
+/* ---------- IMPORT / EXPORT / RESET ---------- */
+document.getElementById("loadBtn").onclick=()=>{
+  const box=document.getElementById("importBox"), msg=document.getElementById("impMsg");
+  try{
+    const d=JSON.parse(box.value);
+    if(!d.slots||!Array.isArray(d.slots)) throw new Error("missing slots array");
+    if(!d.groups) d.groups=state.schedule.groups;
+    state.schedule=d; selectedSlot=d.slots[0]?.id||d.slots[0]?.time;
+    if(!d.slots.find(s=>s.id===selectedSlot)) selectedSlot=d.slots[0]&&(d.slots[0].id=d.slots[0].id||"s0");
+    save();render();
+    msg.textContent="✓ Loaded "+(d.dayName||"day"); msg.className="msg ok";
+  }catch(e){ msg.textContent="Couldn't read that: "+e.message; msg.className="msg err"; }
+};
+document.getElementById("exportBtn").onclick=()=>{
+  const box=document.getElementById("importBox"), msg=document.getElementById("impMsg");
+  box.value=JSON.stringify(state.schedule,null,1);
+  if(navigator.clipboard) navigator.clipboard.writeText(box.value).catch(()=>{});
+  msg.textContent="✓ Current day copied to the box"; msg.className="msg ok";
+};
+document.getElementById("resetBtn").onclick=()=>{
+  if(!confirm("Reset the schedule to the sample day?"))return;
+  state.schedule=defaultSchedule(); selectedSlot="p1"; save();render();
+};
+document.getElementById("resetRosterBtn").onclick=()=>{
+  if(!confirm("Reset the roster to the default specialty list? Your edits will be lost."))return;
+  state.roster=defaultRoster(); save();render();
+};
+document.getElementById("sessionSel").onchange=e=>switchSession(e.target.value);
+document.getElementById("newSessBtn").onclick=()=>{
+  const nm=(prompt("Name for the new session (starts from the default specialty list):","")||"").trim();
+  if(!nm)return; const name=uniqueName(nm);
+  state.sessions[name]=defaultRoster(); switchSession(name);
+};
+document.getElementById("dupSessBtn").onclick=()=>{
+  const nm=(prompt("Name for the copy of \""+state.activeSession+"\":",state.activeSession+" copy")||"").trim();
+  if(!nm)return; const name=uniqueName(nm);
+  state.sessions[name]=clone(state.roster); switchSession(name);
+};
+document.getElementById("renSessBtn").onclick=()=>{
+  const nm=(prompt("Rename this session:",state.activeSession)||"").trim();
+  if(!nm||nm===state.activeSession)return;
+  const name=uniqueName(nm), old=state.activeSession;
+  state.sessions[name]=state.sessions[old]; delete state.sessions[old];
+  state.activeSession=name; state.roster=state.sessions[name]; save(); render();
+};
+document.getElementById("delSessBtn").onclick=()=>{
+  if(Object.keys(state.sessions).length<2){alert("Keep at least one session.");return;}
+  if(!confirm("Delete session \""+state.activeSession+"\"? This can't be undone."))return;
+  delete state.sessions[state.activeSession];
+  state.activeSession=Object.keys(state.sessions)[0]; state.roster=state.sessions[state.activeSession];
+  save(); render();
+};
+document.getElementById("rosSearch").oninput=renderRoster;
+document.getElementById("addWkspBtn").onclick=()=>{
+  const nm=document.getElementById("newWkspName").value.trim();
+  const ty=document.getElementById("newWkspType").value;
+  if(!nm)return; state.roster.push({name:nm,type:ty,loc:"—",people:[]});
+  document.getElementById("newWkspName").value=""; save();renderRoster();
+};
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+render();
+</script>
