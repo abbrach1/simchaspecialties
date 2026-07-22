@@ -1,0 +1,10 @@
+{
+  "name": "simcha-coverage-planner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Camp Simcha specialty coverage planner (static site + one serverless function for reading schedule photos).",
+  "engines": {
+    "node": ">=18"
+  }
+}
