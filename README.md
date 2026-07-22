@@ -5,10 +5,11 @@ see which staff are **free** to cover a special activity — it cross-references
 the day's schedule against your specialty roster, so anyone already assigned to
 a workshop that's running in that slot is marked **busy** and left out.
 
-The app itself is one static file (`index.html`) that runs entirely in the
-browser and saves your rosters and schedules to local storage on each device.
-There is one optional serverless function (`api/parse-schedule.js`) that lets
-you **read a photo of the schedule** and have it filled in automatically.
+The app itself is one static file (`index.html`) that runs in the browser and
+saves your rosters and schedules locally — and, when Firebase is turned on,
+syncs them to a shared cloud copy so every device sees the same data in real
+time. There is one optional serverless function (`api/parse-schedule.js`) that
+lets you **read a photo of the schedule** and have it filled in automatically.
 
 ## What's inside
 
@@ -68,6 +69,41 @@ Notes:
 - The key lives only on the server (the function), never in the browser.
 - This feature only works on the deployed site — opening `index.html` as a local
   file has no server to call. Manual entry works everywhere.
+
+## Shared data across devices (Firebase)
+
+By default the app stores data in each browser's local storage. With Firebase
+turned on, the roster and schedule live in one shared cloud document, so every
+device that opens the site sees the same thing and edits sync in real time. A
+small dot in the top bar shows the status: **Synced**, **Saving…**, **Local
+only**, or a rules/permission warning.
+
+The Firebase config is already embedded in `index.html` (it's a public project
+identifier, safe to ship — not a secret). You just need to switch on the
+database and set access rules:
+
+1. [Firebase console](https://console.firebase.google.com) → project
+   **specialties-1a716** → **Build → Firestore Database → Create database**.
+2. Choose a location and create it.
+3. Open the **Rules** tab, paste the rules below, and **Publish**:
+
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /appState/{docId} {
+         allow read, write: if true;
+       }
+     }
+   }
+   ```
+
+4. Reload the site — the dot should turn green (**Synced**).
+
+**Access note:** these rules let anyone who has the site URL read and write the
+shared data (there's no login). For an internal tool on an unlisted URL that's
+usually fine. If you want it locked down (a shared passcode, or real logins),
+that's a straightforward follow-up — ask and it can be added.
 
 ## Local preview
 

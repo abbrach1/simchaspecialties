@@ -83,7 +83,15 @@
   .appbar .kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;
     color:rgba(255,255,255,.68);font-weight:700}
   .appbar .title{font-family:var(--display);font-weight:600;font-size:19px;line-height:1.05}
-  .appbar .day{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;
+  .rightcluster{margin-left:auto;display:flex;align-items:center;gap:9px;min-width:0}
+  .sync{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+    color:rgba(255,255,255,.85);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);
+    padding:5px 9px;border-radius:20px;white-space:nowrap}
+  .sync .syncdot{width:8px;height:8px;border-radius:50%;background:#c9d2c0;flex:none}
+  .sync.ok .syncdot{background:#7fdca0}
+  .sync.wait .syncdot{background:#e4d38a}
+  .sync.err .syncdot{background:var(--accent)}
+  .appbar .day{display:flex;flex-direction:column;align-items:flex-end;
     background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.14);border-radius:12px;
     padding:6px 12px;max-width:46%}
   .appbar .day .daylabel{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
@@ -298,6 +306,9 @@
     .wrap{padding-bottom:86px}
     .resulthead h2{font-size:18px}
     .appbar .title{font-size:18px}
+    .sync .synctext{display:none}
+    .sync{padding:6px}
+    .appbar .day{max-width:40vw}
   }
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -310,7 +321,10 @@
     <div class="kicker">Camp Simcha · Specialty</div>
     <div class="title">Coverage Planner</div>
   </div>
-  <div class="day"><span class="daylabel">Today</span><span id="dayName">—</span></div>
+  <div class="rightcluster">
+    <span class="sync wait" id="syncStatus" title="Sync status"><span class="syncdot"></span><span class="synctext">Local</span></span>
+    <div class="day"><span class="daylabel">Today</span><span id="dayName">—</span></div>
+  </div>
 </header>
 
 <nav class="tabs" role="tablist" aria-label="Views">
@@ -506,8 +520,29 @@ function save(){
   // keep the active session snapshot in sync with the working roster
   state.sessions[state.activeSession]=state.roster;
   try{localStorage.setItem(LS,JSON.stringify({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule}))}catch(e){}
+  if(window.__syncPush) window.__syncPush(); // push to the shared cloud copy, if connected
 }
 function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
+
+/* ---------- CLOUD SYNC BRIDGE (used by the Firebase module below) ---------- */
+window.__app={
+  // the shared payload written to Firestore
+  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule}),
+  // apply an update that arrived from another device (never pushes back)
+  applyRemote:(data)=>{
+    if(!data||!data.sessions||!Object.keys(data.sessions).length) return;
+    state.sessions=data.sessions;
+    state.activeSession=(data.activeSession&&data.sessions[data.activeSession])
+      ? data.activeSession : Object.keys(data.sessions)[0];
+    state.roster=state.sessions[state.activeSession];
+    if(data.schedule) state.schedule=data.schedule;
+    if(!state.schedule.groups) state.schedule.groups=[];
+    state.schedule.slots.forEach(s=>{if(!s.id)s.id=uid();});
+    if(!state.schedule.slots.find(s=>s.id===selectedSlot)) selectedSlot=state.schedule.slots[0]?.id;
+    try{localStorage.setItem(LS,JSON.stringify(window.__app.getState()))}catch(e){}
+    render();
+  }
+};
 
 /* ---------- SESSIONS ---------- */
 function switchSession(name){
@@ -931,6 +966,93 @@ document.getElementById("addWkspBtn").onclick=()=>{
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 render();
+</script>
+
+<!-- ===== Cloud sync via Firebase Firestore (optional; app works without it) ===== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+// Public Firebase config — safe to ship in client code (identifies the project,
+// it is not a secret). Access is controlled by Firestore security rules.
+const firebaseConfig = {
+  apiKey: "AIzaSyBG9AXZPxMj9_WQ8HZBkjW17bRJ1WsFuNs",
+  authDomain: "specialties-1a716.firebaseapp.com",
+  projectId: "specialties-1a716",
+  storageBucket: "specialties-1a716.firebasestorage.app",
+  messagingSenderId: "954254619277",
+  appId: "1:954254619277:web:3adc833d33678312bde8c4",
+  measurementId: "G-06W2PGG7MM"
+};
+
+function setSync(cls, text){
+  const el=document.getElementById("syncStatus"); if(!el)return;
+  el.className="sync "+cls;
+  const t=el.querySelector(".synctext"); if(t)t.textContent=text;
+  el.title="Sync: "+text;
+}
+
+let db;
+try{
+  const app=initializeApp(firebaseConfig);
+  db=getFirestore(app);
+}catch(e){
+  console.warn("Firebase init failed — running local-only.",e);
+  setSync("err","Local only");
+}
+
+if(db){
+  setSync("wait","Connecting…");
+  const ref=doc(db,"appState","shared"); // one shared document for the whole camp
+  let lastJson=null;      // last payload we sent or received (echo guard)
+  let applying=false;     // true while writing remote data into local state
+  let pushTimer=null;
+  let seeded=false;
+
+  // Listen for changes from any device
+  onSnapshot(ref, snap=>{
+    if(!snap.exists()){
+      // first ever run — seed the shared doc from this device's current data
+      if(!seeded){ seeded=true; pushNow(); }
+      return;
+    }
+    seeded=true;
+    const data=snap.data();
+    const json=JSON.stringify(data);
+    if(json===lastJson) { setSync("ok","Synced"); return; } // our own echo
+    lastJson=json;
+    applying=true;
+    try{ window.__app && window.__app.applyRemote(data); }
+    finally{ applying=false; }
+    setSync("ok","Synced");
+  }, err=>{
+    console.warn("Firestore listen error:",err);
+    setSync("err", err.code==="permission-denied" ? "Rules block access" : "Offline");
+  });
+
+  async function pushNow(){
+    if(!window.__app) return;
+    const data=window.__app.getState();
+    const json=JSON.stringify(data);
+    if(json===lastJson) return;
+    lastJson=json;
+    try{ await setDoc(ref, data); setSync("ok","Synced"); }
+    catch(e){
+      console.warn("Firestore write error:",e);
+      setSync("err", e.code==="permission-denied" ? "Rules block writes" : "Save failed");
+      lastJson=null; // allow retry on next change
+    }
+  }
+
+  // Debounced push, called by save() through window.__syncPush
+  window.__syncPush=()=>{
+    if(applying) return;            // don't echo remote updates back
+    setSync("wait","Saving…");
+    clearTimeout(pushTimer);
+    pushTimer=setTimeout(pushNow, 600);
+  };
+}
 </script>
 </body>
 </html>
