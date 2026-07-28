@@ -478,52 +478,71 @@
 /* ---------- DEFAULT DATA (from the specialty list) ---------- */
 const H="head", A="asst";
 function defaultRoster(){return [
- {name:"AI 3D",type:"specialty",loc:"LEGO",people:[["Shua Greenberg",H],["Pacey Jacoby",A],["Minzer",A]]},
- {name:"Arts 'n Crafts",type:"specialty",loc:"Castle A&C",people:[["Aviva Feiner",H],["Chaim Stern",A],["Moshe Hollander",A],["Avi Levy",A],["Tzvi Reichmann",A]]},
- {name:"Baking",type:"specialty",loc:"Castle Baking",people:[["Shimi Lamm",A],["Yaakov Rothstein",A]]},
- {name:"Candles",type:"specialty",loc:"Candle shop",people:[["Avi Lowenthal",H],["Aaron Meir Lowenthal",A],["Shimon Segal",A],["Yehuda Levi",A],["Avi Ambinder",A],["Daniel Singer",A],["EJ Erber",A]]},
- {name:"Cheers",type:"specialty",loc:"LL Castle 4",people:[["Yaakov Levenbrown",H],["Rami Harari",A]]},
- {name:"Ductigami",type:"specialty",loc:"Matts Front",people:[["Adina Feinstein",H],["Moshe Kreiser",A],["Akiva Schwebel",A]]},
- {name:"Flight School / Rocketry",type:"specialty",loc:"LL2",people:[["Benjamin BenDayan",H],["Benny Rekant",A]]},
- {name:"Glass Fusion",type:"specialty",loc:"CS 3&4",people:[["Shani Farkas",H],["Refoel Sax",A],["Yoni Solomon",A]]},
- {name:"Laser Engraving",type:"specialty",loc:"CS 1",people:[["Mimi Feiler",H],["Motti Eberstark",A],["Moshe Feinstein",A]]},
- {name:"Leather",type:"specialty",loc:"Old AC",people:[["Dovid Kurzman",H],["Nachi Tajerstein",A]]},
- {name:"LEGO",type:"specialty",loc:"LEGO",people:[["Zev Wiesel",A]]},
- {name:"Metal Impressions",type:"specialty",loc:"LL3",people:[["Yaakov Lewittes",A],["Sami Klein",A]]},
- {name:"Needle Punch Art",type:"specialty",loc:"LEGO",people:[["Masha Schore",H],["Yoni Cherns",A],["Yehuda Rothberger",A]]},
- {name:"Pottery",type:"specialty",loc:"Katz Pot Shop",people:[["Shifra Zeiler",H],["Naor Davidovitch",A],["Yosef Treizman",A],["Sid Zacharia",A],["Yoni Klein",A]]},
- {name:"Resin",type:"specialty",loc:"—",people:[["Devora Stok",H],["Yoni Cherns",A],["Yehuda Rothberger",A]]},
- {name:"Ropes Course",type:"specialty",loc:"Ropes",people:[["Zev Wiesel",A],["Netanel Perez",A],["Coby Soffer",A],["Menachem Sprung",A],["Benny London",A],["Yekutiel Feiler",A],["Avraham Katz",A]]},
- {name:"Slice",type:"specialty",loc:"LL Castle 3",people:[["Shimi Lamm",A],["Yaakov Rothstein",A]]},
- {name:"Wired",type:"specialty",loc:"LL1",people:[["Ezra Englander",A],["Binyomin Bodner",A]]},
- {name:"Sports",type:"specialty",loc:"Pavilion",people:[["Pacey Jacoby",A]]},
- {name:"Water Wars",type:"specialty",loc:"—",people:[["David Rosen",H],["Akiva Brafman",A]]},
- {name:"Woodburning",type:"specialty",loc:"Matts Rt Back",people:[["Shia Wallach",H],["Avraham Goldfield",A]]},
- {name:"Woodworking",type:"specialty",loc:"Wood",people:[["Dovi Berkes",H],["Yehuda Schmidt",H],["Shlomo Shinensky",A],["Joey Sosnick",A]]},
- {name:"Yoga / Meditation",type:"specialty",loc:"—",people:[["Pacey Jacoby",A]]},
- {name:"Night Crew",type:"standing",loc:"nights",people:[["Abie Brachfeld",A],["Dovi Berkes",A],["Yehuda Schmidt",A],["Aaron Meir Lowenthal",A]]},
- {name:"Swim",type:"standing",loc:"Lake",people:[["Bentzy Boyer",A]]},
- {name:"Lake / Boats",type:"standing",loc:"Lake",people:[["Tzvi Schwab",A]]},
- {name:"Fishing",type:"standing",loc:"Lake",people:[["Jonah Cohen",A],["Yermi Kirschenbaum",A]]},
- {name:"Office",type:"standing",loc:"Office",people:[["Nava Rosenberg",H],["Sinai Roth",A],["Yehuda Brody",A],["Moshe Hollander",A]]},
- {name:"Canteen",type:"standing",loc:"Canteen",people:[["Ami Swerdlik",A],["Yechiel Yablonsky",A],["Yaakov Oratz",A]]},
- {name:"Recording Studio",type:"standing",loc:"Studio",people:[["Shloime Cytryn",A]]},
- {name:"Maintenance",type:"standing",loc:"Camp",people:[["Yoni Rosenberg",H],["Asher Kasnett",A],["Koby Eisenberg",A],["Gabi Schick",A],["Moshe Kaplan",A],["Moshe Koritz",A]]},
- {name:"Costume Closet / Xbox",type:"standing",loc:"—",people:[["Shmuel Berg",A],["Tzvi Muller",A]]},
- {name:"DJ",type:"standing",loc:"—",people:[["Tzvi",A]]},
+ {name:"AI 3D & 3D Printing",type:"specialty",loc:"LEGO",people:[["Benjamin Light",A],["Shmuel Sinensky",A]]},
+ {name:"Archery",type:"specialty",loc:"Pavilion",people:[]},
+ {name:"Arts 'n Crafts",type:"specialty",loc:"Castle A&C",people:[["Eli Toporowitz",A],["Yehuda Statfeld",A],["Yonah Mandel",A]]},
+ {name:"Baking/Challah Baking",type:"specialty",loc:"Castle Baking",people:[["Yaakov Cohen",A],["Avraham Friedman",A]]},
+ {name:"Candles",type:"specialty",loc:"Candle shop",people:[["Chaim Peppard",H],["EJ Erber",A],["Binyamin Adler",A],["Yoni Farkas",A],["Moshe Koritz",A]]},
+ {name:"Canvas Painting",type:"specialty",loc:"—",people:[["Shmuel Baker",A],["Moses Muller",A]]},
+ {name:"Cheers",type:"specialty",loc:"CS3",people:[["Abie Jacoby",A],["Nosson Feigenbaum",A]]},
+ {name:"Ductigami",type:"specialty",loc:"LL Matts",people:[["Adina Feinstein",H],["Yabrov Elyashiv",A],["Shilo Abramowitz",A]]},
+ {name:"Glass Etching",type:"specialty",loc:"Lower Matts (week 2 of Ductigami)",people:[]},
+ {name:"Glass Fusion",type:"specialty",loc:"CS3",people:[["Azarya Tiger",A],["Akiva Lanner",A]]},
+ {name:"Hockey",type:"specialty",loc:"Hockey Ct",people:[["Max Pockriss",A],["Shalom Gross",A]]},
+ {name:"Jamming/Music",type:"specialty",loc:"Vestibule",people:[["Shmuel Sinensky",A],["Nosson Feigenbaum",A]]},
+ {name:"Laser Engraving",type:"specialty",loc:"CS 1",people:[["Ezra Schick",A],["Charles Breda",A]]},
+ {name:"Leather",type:"specialty",loc:"Old AC",people:[["Yosef Karpel",A],["Falik Shedrowitski",A]]},
+ {name:"Mad Science",type:"specialty",loc:"—",people:[["Azarya Tiger",A],["Akiva Lanner",A]]},
+ {name:"Metal Impressions",type:"specialty",loc:"LL2",people:[["Abraham Steinberg",A],["Yosef Okun",A]]},
+ {name:"Pottery",type:"specialty",loc:"Pot Shop",people:[["Chaim Adler",H],["Sid Zacharia",A],["Miles Form",A],["Ephraim Meyer",A]]},
+ {name:"Resin",type:"specialty",loc:"—",people:[["Ben Rokach",A],["Azriel Shanin",A]]},
+ {name:"Ropes Course",type:"specialty",loc:"Ropes",people:[["Coby Soffer",H],["Zev Wiesel",A],["Netanel Perez",A],["Menachem Sprung",A],["Benny London",A],["Yekutiel Feiler",A]]},
+ {name:"Soap Bar",type:"specialty",loc:"LL1",people:[["Nochum Aryeh Glazer",A],["Eli Friedman",A]]},
+ {name:"Slice/Sushi",type:"specialty",loc:"Castle 3",people:[["Zevi Resnick",A],["Ilan Lowell",A],["Ari Maimon",A]]},
+ {name:"Wired",type:"specialty",loc:"—",people:[["Noey Taub",A],["Ezra Weiss",A]]},
+ {name:"Woodburning",type:"specialty",loc:"Matts LL",people:[["Dovid Lichstein",A],["Shlomo Golubchik",A]]},
+ {name:"Woodworking",type:"specialty",loc:"Wood",people:[["Dovi Berkes",H],["Josh Frankel",A],["Shlomo Shinensky",A],["Tani Gottleib",A]]},
+ {name:"XBOX",type:"specialty",loc:"—",people:[]},
+ {name:"Swim",type:"standing",loc:"Lake",people:[]},
+ {name:"Lake",type:"standing",loc:"Lake",people:[]},
+ {name:"Fishing",type:"standing",loc:"—",people:[["Jacky Lerner",A],["Kovi Adler",A]]},
+ {name:"Office",type:"standing",loc:"Office",people:[["Shua Mendlowitz",A],["Yaakov Baker",A]]},
+ {name:"Learning Groups",type:"standing",loc:"—",people:[]},
+ {name:"Canteen",type:"standing",loc:"—",people:[["Yosef Berzesky",A],["Motty Ortner",A],["Tzvi Ma",A],["Yoni Farkas",A]]},
+ {name:"Recording Studio",type:"standing",loc:"—",people:[["Shloimy Cytrin",A]]},
+ {name:"Maintenance",type:"standing",loc:"—",people:[["Evan Teigman",A],["Pinny Zanziper",A],["Yisroel Davidson",A],["Moshe Kaplan",A],["Moshe Friedman",A]]},
+ {name:"Costume Closet",type:"standing",loc:"—",people:[]},
+ {name:"DJ",type:"standing",loc:"—",people:[]},
+ {name:"Night Crew",type:"standing",loc:"—",people:[["Abie Brachfeld",A],["Dovi Berkes",A],["Shlomo Shinensky",A],["Josh Frankel",A],["Tani Gottleib",A]]},
 ];}
 
 /* schedule cell text -> workshop name in roster */
 const ALIAS={
- "ai 3d":"AI 3D","arts & crafts":"Arts 'n Crafts","arts 'n crafts":"Arts 'n Crafts",
- "arts and crafts":"Arts 'n Crafts","woodburning":"Woodburning","wired":"Wired",
- "water wars":"Water Wars","wood working":"Woodworking","woodworking":"Woodworking",
- "laser engraving":"Laser Engraving","glass fusion":"Glass Fusion","leather":"Leather",
- "cheers":"Cheers","sports: soccer":"Sports","sports":"Sports","soccer":"Sports",
- "pottery glazing":"Pottery","pottery":"Pottery","ropes course":"Ropes Course",
- "ductagami":"Ductigami","ductigami":"Ductigami","resinate":"Resin","resin":"Resin",
- "metal impressions":"Metal Impressions","candles":"Candles","baking":"Baking","slice":"Slice",
- "needle punch":"Needle Punch Art","yoga":"Yoga / Meditation",
+ "ai 3d":"AI 3D & 3D Printing","3d printing":"AI 3D & 3D Printing","ai 3d & 3d printing":"AI 3D & 3D Printing",
+ "archery":"Archery",
+ "arts & crafts":"Arts 'n Crafts","arts and crafts":"Arts 'n Crafts","arts 'n crafts":"Arts 'n Crafts","art":"Arts 'n Crafts",
+ "baking":"Baking/Challah Baking","challah":"Baking/Challah Baking","challah baking":"Baking/Challah Baking","baking/challah baking":"Baking/Challah Baking",
+ "candles":"Candles","candle":"Candles",
+ "canvas painting":"Canvas Painting","canvas":"Canvas Painting",
+ "cheers":"Cheers",
+ "ductagami":"Ductigami","ductigami":"Ductigami",
+ "glass etching":"Glass Etching",
+ "glass fusion":"Glass Fusion",
+ "hockey":"Hockey",
+ "jamming":"Jamming/Music","music":"Jamming/Music","jamming/music":"Jamming/Music",
+ "laser engraving":"Laser Engraving","laser":"Laser Engraving",
+ "leather":"Leather",
+ "mad science":"Mad Science",
+ "metal impressions":"Metal Impressions","metal":"Metal Impressions",
+ "pottery glazing":"Pottery","pottery":"Pottery",
+ "resinate":"Resin","resin":"Resin",
+ "ropes course":"Ropes Course","ropes":"Ropes Course",
+ "soap bar":"Soap Bar","soap":"Soap Bar",
+ "slice":"Slice/Sushi","sushi":"Slice/Sushi","slice/sushi":"Slice/Sushi",
+ "wired":"Wired",
+ "woodburning":"Woodburning","wood burning":"Woodburning",
+ "wood working":"Woodworking","woodworking":"Woodworking",
+ "xbox":"XBOX","canteen":"Canteen",
 };
 /* activities that need coverage themselves (no assigned crew) */
 const SPECIAL=["clue","carnival","dodgeball","color war","concert","trip","chagigah","bbq","free play","swim gala"];
@@ -537,22 +556,22 @@ function defaultSchedule(){return {
     {g:0,a:"Carnival at the Pavilion"},{g:1,a:"Carnival at the Pavilion"},{g:2,a:"Carnival at the Pavilion"},
     {g:3,a:"Carnival at the Pavilion"},{g:4,a:"Carnival at the Pavilion"}]},
   {id:"p1",time:"2:00–3:00",label:"Period 1",entries:[
-    {g:0,a:"CLUE"},{g:1,a:"Woodburning"},{g:1,a:"Wired"},{g:2,a:"Water Wars"},{g:2,a:"Wood Working"},
-    {g:3,a:"Laser Engraving"},{g:3,a:"Glass Fusion"},{g:4,a:"Arts & Crafts"},{g:4,a:"AI 3D"}]},
+    {g:0,a:"CLUE"},{g:1,a:"Woodburning"},{g:1,a:"Wired"},{g:2,a:"Hockey"},{g:2,a:"Woodworking"},
+    {g:3,a:"Laser Engraving"},{g:3,a:"Glass Fusion"},{g:4,a:"Arts 'n Crafts"},{g:4,a:"AI 3D & 3D Printing"}]},
   {id:"p2",time:"3:00–4:00",label:"Period 2",entries:[
-    {g:0,a:"Leather"},{g:0,a:"Cheers"},{g:1,a:"CLUE"},{g:2,a:"Sports: Soccer"},{g:3,a:"Pottery Glazing"},
-    {g:4,a:"Ropes Course"},{g:4,a:"Wired"},{g:6,a:"Ductagami"}]},
+    {g:0,a:"Leather"},{g:0,a:"Cheers"},{g:1,a:"CLUE"},{g:2,a:"Archery"},{g:3,a:"Pottery"},
+    {g:4,a:"Ropes Course"},{g:4,a:"Wired"},{g:6,a:"Ductigami"}]},
   {id:"p3",time:"4:00–4:50",label:"Period 3",entries:[
-    {g:0,a:"Laser Engraving"},{g:0,a:"Ductagami"},{g:1,a:"Leather"},{g:1,a:"Pottery Glazing"},{g:2,a:"CLUE"},
-    {g:3,a:"Resinate"},{g:3,a:"Ropes Course"},{g:4,a:"Glass Fusion"},{g:4,a:"Metal Impressions"},{g:5,a:"Arts & Crafts"}]},
+    {g:0,a:"Laser Engraving"},{g:0,a:"Ductigami"},{g:1,a:"Leather"},{g:1,a:"Pottery"},{g:2,a:"CLUE"},
+    {g:3,a:"Resin"},{g:3,a:"Ropes Course"},{g:4,a:"Glass Fusion"},{g:4,a:"Metal Impressions"},{g:5,a:"Arts 'n Crafts"}]},
   {id:"p4",time:"4:50–5:45",label:"Period 4",entries:[
-    {g:0,a:"Pottery Glazing"},{g:0,a:"Ropes Course"},{g:1,a:"Metal Impressions"},{g:1,a:"Resinate"},
-    {g:2,a:"Ductagami"},{g:2,a:"Water Wars"},{g:3,a:"CLUE"},{g:4,a:"Dodgeball in the Pavillion"},{g:5,a:"Candles"}]},
+    {g:0,a:"Pottery"},{g:0,a:"Ropes Course"},{g:1,a:"Metal Impressions"},{g:1,a:"Resin"},
+    {g:2,a:"Ductigami"},{g:2,a:"Soap Bar"},{g:3,a:"CLUE"},{g:4,a:"Dodgeball in the Pavillion"},{g:5,a:"Candles"}]},
  ]
 };}
 
 /* ---------- STATE ---------- */
-const LS="campSimchaCoverage_v1";
+const LS="campSimchaCoverage_v2"; // bumped when the default roster changed (CSB -> CSSB)
 const clone=o=>JSON.parse(JSON.stringify(o));
 let state=load()||{};
 // migrate / initialise sessions
@@ -1161,7 +1180,7 @@ try{
 
 if(db){
   setSync("wait","Connecting…");
-  const ref=doc(db,"appState","shared"); // one shared document for the whole camp
+  const ref=doc(db,"appState","shared-cssb"); // one shared document for the whole camp (cssb roster)
   let lastJson=null;      // last payload we sent or received (echo guard)
   let applying=false;     // true while writing remote data into local state
   let pushTimer=null;
