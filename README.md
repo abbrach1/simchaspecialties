@@ -22,6 +22,10 @@ lets you **read a photo of the schedule** and have it filled in automatically.
 - **Roster** — per-session staff lists. Add or remove people on the fly, add new
   workshops, and keep separate **sessions** (create / rename / duplicate / delete)
   so each camp session or year has its own roster.
+- **Coverage assignments** — from the Finder, pick any activity in the slot that
+  needs more help (special activities are suggested first), tap the **available
+  people** to assign them, and hit **📋 List to send** for a copyable / shareable
+  summary of who's covering what, grouped by time slot.
 - **Attendance & follow-ups** — in the Finder's Busy list, mark each assigned
   person **✓ Came / ✗ No-show** and add a **✎ note**. Anyone flagged no-show or
   noted collects on the **Follow-ups** tab (grouped by day, with a live count

@@ -205,6 +205,45 @@
   .attnote{flex-basis:100%;font-size:12.5px;color:var(--ink-soft);background:var(--surface-2);
     border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:6px 11px}
 
+  /* coverage assignments */
+  .agrow{flex:1}
+  .assignbox{margin-bottom:4px}
+  .acard{border:1.5px solid var(--accent-wash);border-radius:13px;padding:12px;margin-bottom:10px;
+    background:var(--surface-2)}
+  .ahead{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .ahead b{font-family:var(--display);font-weight:600;font-size:15px}
+  .acount{font-size:11px;font-weight:700;color:var(--accent-strong);background:var(--accent-wash);
+    padding:1px 9px;border-radius:20px;font-variant-numeric:tabular-nums}
+  .apeople{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+  .aperson{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:9px;font-size:13px;
+    font-weight:650;background:var(--surface);border:1.5px solid var(--accent-wash)}
+  .aperson .x{cursor:pointer;color:var(--ink-faint);font-weight:800}
+  .aperson .x:hover{color:var(--busy)}
+  .apick{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:10px;
+    border-top:1px dashed var(--line)}
+  .pickchip{font:inherit;font-size:12.5px;font-weight:600;border:1.5px solid var(--line);
+    background:var(--surface);color:var(--ink);border-radius:20px;padding:6px 12px;cursor:pointer;
+    min-height:34px}
+  .pickchip:hover{border-color:var(--accent);color:var(--accent-strong)}
+  .pickchip.standing{opacity:.7}
+  .assignadd{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .assignadd select{flex:1;min-width:170px}
+  .anote{font-size:12.5px;color:var(--ink-faint)}
+  .person.assigned{opacity:.55}
+  .person.assigned::before{background:var(--accent)}
+  .person.assigned .role{color:var(--accent-strong)}
+
+  /* send-out modal */
+  .modal{position:fixed;inset:0;z-index:100;background:rgba(12,22,16,.55);display:flex;
+    align-items:center;justify-content:center;padding:16px}
+  .modal[hidden]{display:none}
+  .modalcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);width:min(560px,100%);max-height:86vh;display:flex;flex-direction:column;
+    padding:16px}
+  .modalhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .modalhead h3{font-size:17px}
+  .modalcard textarea{flex:1;min-height:220px}
+
   /* follow-ups */
   .tabcount{position:absolute;top:3px;right:10px;background:var(--busy);color:#fff;font-size:10px;
     font-weight:800;min-width:17px;height:17px;border-radius:9px;display:inline-grid;place-items:center;
@@ -473,6 +512,19 @@
   </div>
 </div>
 
+<div class="modal" id="sendModal" hidden>
+  <div class="modalcard">
+    <div class="modalhead"><h3>Coverage list to send</h3><button class="btn sm" id="sendClose">Close</button></div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px">Everyone you've assigned to cover, grouped by time slot. Copy or share it.</p>
+    <textarea id="sendText" readonly spellcheck="false"></textarea>
+    <div class="toolbar" style="margin:10px 0 0">
+      <button class="btn primary" id="sendCopy">Copy</button>
+      <button class="btn" id="sendShare">Share…</button>
+      <span class="msg" id="sendMsg"></span>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 /* ---------- DEFAULT DATA (from the specialty list) ---------- */
@@ -588,10 +640,11 @@ state.roster=state.sessions[state.activeSession];
 delete state.__legacy;
 if(!state.schedule.groups) state.schedule.groups=[];
 if(!state.attendance) state.attendance={}; // key -> {day,slotTime,slotLabel,person,workshop,status,note}
+if(!state.assignments) state.assignments={}; // id -> {id,day,slotId,slotTime,slotLabel,activity,people[]}
 state.schedule.slots.forEach(s=>{if(!s.id)s.id="s"+Math.random().toString(36).slice(2,8);});
 let selectedSlot=state.schedule.slots.find(s=>s.id==="p1")?"p1":state.schedule.slots[0]?.id;
 
-function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance};}
+function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments};}
 function save(){
   // keep the active session snapshot in sync with the working roster
   state.sessions[state.activeSession]=state.roster;
@@ -603,7 +656,7 @@ function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null
 /* ---------- CLOUD SYNC BRIDGE (used by the Firebase module below) ---------- */
 window.__app={
   // the shared payload written to Firestore
-  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance}),
+  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments}),
   // apply an update that arrived from another device (never pushes back)
   applyRemote:(data)=>{
     if(!data||!data.sessions||!Object.keys(data.sessions).length) return;
@@ -613,6 +666,7 @@ window.__app={
     state.roster=state.sessions[state.activeSession];
     if(data.schedule) state.schedule=data.schedule;
     state.attendance=data.attendance||{};
+    state.assignments=data.assignments||{};
     if(!state.schedule.groups) state.schedule.groups=[];
     state.schedule.slots.forEach(s=>{if(!s.id)s.id=uid();});
     if(!state.schedule.slots.find(s=>s.id===selectedSlot)) selectedSlot=state.schedule.slots[0]?.id;
@@ -711,6 +765,26 @@ document.getElementById("result").addEventListener("click",e=>{
   }
   renderResult(); renderFollowups();
 });
+/* coverage-assignment clicks on the Finder result */
+document.getElementById("result").addEventListener("click",e=>{
+  const slot=slotById(selectedSlot); if(!slot)return;
+  const t=e.target;
+  if(t.closest("#sendOpen")){ openSendModal(); return; }
+  if(t.closest("#newAssignBtn")){
+    const sel=document.getElementById("newAssignActivity"); let act=sel?sel.value:"";
+    if(!act) return;
+    if(act==="__custom__"){ act=(prompt("What needs coverage? (activity name)","")||"").trim(); if(!act)return; }
+    openPickId=newAssignment(slot,act); renderResult(); return;
+  }
+  const el=t.closest(".aopen,.a-add,.a-rm,.adel,.aedit"); if(!el)return;
+  const id=el.dataset.id;
+  if(el.classList.contains("aopen")){ openPickId=(openPickId===id?null:id); }
+  else if(el.classList.contains("a-add")||el.classList.contains("a-rm")){ toggleAssignee(id,el.dataset.name); }
+  else if(el.classList.contains("adel")){ if(confirm("Remove this coverage assignment?")) removeAssignment(id); else return; }
+  else if(el.classList.contains("aedit")){ const a=state.assignments[id]; if(!a)return;
+    const n=prompt("Rename activity:",a.activity||""); if(n===null)return; setAssignmentActivity(id,n.trim()); }
+  renderResult();
+});
 /* follow-up list actions */
 document.getElementById("fuList").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b)return;
@@ -767,6 +841,82 @@ function attRow(p,workshop,slot){
   `</div>`;
 }
 
+/* ---------- COVERAGE ASSIGNMENTS ---------- */
+let openPickId=null; // which assignment card has its "add people" picker open
+function assignmentsForSlot(slotId){
+  return Object.values(state.assignments)
+    .filter(x=>x.slotId===slotId && (x.day||"")===(state.schedule.dayName||""));
+}
+function newAssignment(slot,activity){
+  const id="a"+Math.random().toString(36).slice(2,8);
+  state.assignments[id]={id,day:state.schedule.dayName||"",slotId:slot.id,
+    slotTime:slot.time||"",slotLabel:slot.label||"",activity:activity||"",people:[]};
+  save(); return id;
+}
+function removeAssignment(id){ delete state.assignments[id]; if(openPickId===id)openPickId=null; save(); }
+function setAssignmentActivity(id,act){ const a=state.assignments[id]; if(a){a.activity=act; save();} }
+function toggleAssignee(id,name){
+  const a=state.assignments[id]; if(!a)return;
+  const i=a.people.indexOf(name);
+  if(i>=0) a.people.splice(i,1); else a.people.push(name);
+  save();
+}
+function coverageSectionHtml(slot,a,assignedSet){
+  const assigns=assignmentsForSlot(slot.id);
+  const avail=[...a.free,...a.freeStanding].filter(p=>!assignedSet.has(p.name));
+  const optionHtml=`<option value="" disabled selected>Choose an activity…</option>`+
+    (a.specials.length?`<optgroup label="Needs coverage">`+a.specials.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("")+`</optgroup>`:"")+
+    (a.running.size?`<optgroup label="Workshops running">`+[...a.running.keys()].sort().map(w=>`<option value="${esc(w)}">${esc(w)}</option>`).join("")+`</optgroup>`:"")+
+    `<option value="__custom__">Other… (type your own)</option>`;
+  const cards=assigns.map(x=>{
+    const isOpen=openPickId===x.id;
+    const people=x.people.length
+      ? x.people.map(n=>`<span class="aperson">${esc(n)}<span class="x a-rm" data-id="${x.id}" data-name="${esc(n)}" title="Unassign">✕</span></span>`).join("")
+      : `<span class="anote">No one assigned yet — tap “Add people”.</span>`;
+    const pick=isOpen
+      ? `<div class="apick">${avail.length?avail.map(p=>`<button class="pickchip${p.onlyStanding?" standing":""} a-add" data-id="${x.id}" data-name="${esc(p.name)}">＋ ${esc(p.name)}${p.onlyStanding?" · crew":""}</button>`).join(""):'<span class="anote">No one left available for this slot.</span>'}</div>`
+      : "";
+    return `<div class="acard" data-id="${x.id}">`+
+      `<div class="ahead"><b>${esc(x.activity||"(activity)")}</b><span class="acount">${x.people.length}</span>`+
+      `<span class="agrow"></span>`+
+      `<button class="btn sm aedit" data-id="${x.id}">Rename</button>`+
+      `<button class="btn sm adel" data-id="${x.id}" title="Remove assignment">✕</button></div>`+
+      `<div class="apeople">${people}</div>`+
+      `<button class="btn sm aopen" data-id="${x.id}">${isOpen?"✓ Done adding":"＋ Add people"}</button>`+
+      pick+
+    `</div>`;
+  }).join("");
+  return `<div class="sectlabel"><span class="dot" style="background:var(--accent)"></span>`+
+    `<h3>Coverage assignments</h3><span class="agrow"></span>`+
+    `<button class="btn sm" id="sendOpen">📋 List to send</button></div>`+
+    `<div class="assignbox">`+
+      (cards||'<div class="anote" style="margin-bottom:10px">Nothing assigned for this slot yet. Choose an activity that needs help and add people.</div>')+
+      `<div class="assignadd"><select id="newAssignActivity" aria-label="Activity to cover">${optionHtml}</select>`+
+      `<button class="btn primary sm" id="newAssignBtn">Assign coverage</button></div>`+
+    `</div>`;
+}
+function buildSendoutText(){
+  const day=state.schedule.dayName||"";
+  const lines=["Camp Simcha — Coverage"]; if(day)lines.push(day); lines.push("");
+  let any=false;
+  state.schedule.slots.forEach(s=>{
+    const as=assignmentsForSlot(s.id);
+    if(!as.length) return;
+    any=true;
+    lines.push((s.time||"")+(s.label?" · "+s.label:""));
+    as.forEach(a=>lines.push("  • "+(a.activity||"(activity)")+": "+(a.people.length?a.people.join(", "):"(no one yet)")));
+    lines.push("");
+  });
+  if(!any) return "No coverage assigned yet"+(day?" for "+day:"")+".";
+  return lines.join("\n").trim();
+}
+function openSendModal(){
+  const m=document.getElementById("sendModal"); if(!m)return;
+  document.getElementById("sendText").value=buildSendoutText();
+  document.getElementById("sendMsg").textContent="";
+  m.hidden=false;
+}
+
 function renderResult(){
   const el=document.getElementById("result");
   const slot=slotById(selectedSlot);
@@ -777,6 +927,11 @@ function renderResult(){
     : `<span class="chip">No special activity flagged</span>`;
   const runHtml=[...a.running.keys()].sort().map(w=>`<span class="chip">${esc(w)}</span>`).join("")||`<span class="chip">No workshops running</span>`;
   const unkHtml=a.unknowns.length?`<div class="note" style="margin:12px 0 0">⚠ Not matched to the roster (treated as no-crew): <b>${a.unknowns.map(esc).join(", ")}</b>. Add these in the Roster tab if they use specialty staff.</div>`:"";
+
+  const assignedSet=new Set(); assignmentsForSlot(slot.id).forEach(x=>x.people.forEach(n=>assignedSet.add(n)));
+  const freeChip=p=> assignedSet.has(p.name)
+    ? `<span class="person assigned" title="Assigned to coverage this slot"><span class="role">assigned</span>${esc(p.name)}</span>`
+    : personChip(p);
 
   el.innerHTML=`
     <div class="resulthead">
@@ -794,8 +949,10 @@ function renderResult(){
       ${unkHtml}
     </div>
 
+    ${coverageSectionHtml(slot,a,assignedSet)}
+
     <div class="sectlabel"><span class="dot g"></span><h3>Free — pull these first</h3><span class="ct">${a.free.length}</span></div>
-    <div class="people">${a.free.map(p=>personChip(p)).join("")||'<span class="empty">Nobody free — every specialty person is in a running workshop.</span>'}</div>
+    <div class="people">${a.free.map(p=>freeChip(p)).join("")||'<span class="empty">Nobody free — every specialty person is in a running workshop.</span>'}</div>
 
     <div class="sectlabel"><span class="dot a"></span><h3>Standing crew — free of workshops, but hold fixed duties</h3><span class="ct">${a.freeStanding.length}</span></div>
     <div class="people">${a.freeStanding.map(p=>personChip(p)).join("")||'<span class="empty">None.</span>'}</div>
@@ -1132,6 +1289,20 @@ schedView.addEventListener("change",e=>{
   }
 });
 function refreshFinder(){renderSlotList();renderResult();}
+/* send-out modal */
+document.getElementById("sendClose").onclick=()=>{document.getElementById("sendModal").hidden=true;};
+document.getElementById("sendModal").onclick=e=>{ if(e.target.id==="sendModal") e.currentTarget.hidden=true; };
+document.getElementById("sendCopy").onclick=()=>{
+  const txt=document.getElementById("sendText").value, msg=document.getElementById("sendMsg");
+  const done=()=>{msg.textContent="✓ Copied";msg.className="msg ok";};
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(done).catch(()=>{document.getElementById("sendText").select();done();});
+  else {document.getElementById("sendText").select();try{document.execCommand("copy");}catch(e){} done();}
+};
+document.getElementById("sendShare").onclick=async()=>{
+  const txt=document.getElementById("sendText").value, msg=document.getElementById("sendMsg");
+  if(navigator.share){ try{ await navigator.share({title:"Camp Simcha — Coverage",text:txt}); }catch(e){} }
+  else { msg.textContent="Sharing isn't supported here — use Copy."; msg.className="msg err"; }
+};
 document.getElementById("rosSearch").oninput=renderRoster;
 document.getElementById("addWkspBtn").onclick=()=>{
   const nm=document.getElementById("newWkspName").value.trim();
