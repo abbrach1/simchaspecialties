@@ -103,7 +103,7 @@
   .tabs{display:flex;gap:6px;max-width:1120px;margin:0 auto;padding:12px 16px 0}
   .tab{appearance:none;border:1px solid transparent;background:transparent;color:var(--ink-soft);
     font:inherit;font-weight:650;font-size:14px;padding:9px 16px;border-radius:12px;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;gap:8px;transition:.14s}
+    display:flex;align-items:center;justify-content:center;gap:8px;transition:.14s;position:relative}
   .tab svg{width:18px;height:18px;flex:none}
   .tab:hover{color:var(--ink);background:var(--surface-2)}
   .tab[aria-selected="true"]{background:var(--accent-wash);color:var(--accent-strong);
@@ -186,6 +186,44 @@
   .busygroup .person::before{background:var(--busy)}
   .busygroup .person .role{color:var(--busy)}
   .empty{color:var(--ink-faint);font-size:13.5px;padding:6px 2px;font-style:italic}
+
+  /* attendance rows (busy list) */
+  .attlist{display:flex;flex-direction:column}
+  .attrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 0;
+    border-bottom:1px dashed var(--line)}
+  .attrow:last-child{border-bottom:0}
+  .attname{flex:1;min-width:120px;font-size:13.5px;font-weight:650}
+  .attbtns{display:flex;gap:6px;flex:none}
+  .attbtn{width:36px;height:36px;border-radius:9px;border:1.5px solid var(--line);
+    background:var(--surface);color:var(--ink-faint);font-size:15px;font-weight:800;cursor:pointer;
+    display:grid;place-items:center;padding:0;transition:.12s}
+  .attbtn:hover{border-color:var(--accent)}
+  .attbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .attbtn.came.on{background:var(--free-bg);border-color:var(--free-line);color:var(--free)}
+  .attbtn.no.on{background:var(--busy-bg);border-color:var(--busy-line);color:var(--busy)}
+  .attbtn.note.has{border-color:var(--accent);color:var(--accent-strong);background:var(--accent-wash)}
+  .attnote{flex-basis:100%;font-size:12.5px;color:var(--ink-soft);background:var(--surface-2);
+    border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:6px 11px}
+
+  /* follow-ups */
+  .tabcount{position:absolute;top:3px;right:10px;background:var(--busy);color:#fff;font-size:10px;
+    font-weight:800;min-width:17px;height:17px;border-radius:9px;display:inline-grid;place-items:center;
+    padding:0 4px;font-variant-numeric:tabular-nums;box-shadow:0 0 0 2px var(--surface)}
+  .fday{display:flex;align-items:center;gap:8px;margin:16px 2px 9px}
+  .fday .fcount{background:var(--surface-3);color:var(--ink-soft);font-size:11px;font-weight:700;
+    padding:1px 8px;border-radius:20px}
+  .fitem{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;
+    padding:13px 15px;margin-bottom:9px}
+  .fmain{min-width:0;flex:1}
+  .fperson{font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .fmeta{font-size:12px;color:var(--ink-soft);margin-top:2px}
+  .fnote{font-size:13px;color:var(--ink);background:var(--surface-2);border-left:3px solid var(--accent);
+    border-radius:0 8px 8px 0;padding:7px 11px;margin-top:8px}
+  .fbadge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+    padding:2px 8px;border-radius:20px}
+  .fbadge.no{background:var(--busy-bg);color:var(--busy);border:1px solid var(--busy-line)}
+  .fbadge.ok{background:var(--free-bg);color:var(--free);border:1px solid var(--free-line)}
+  .factions{display:flex;gap:7px;flex:none}
 
   /* ---------- Schedule: period cards (view) ---------- */
   .periods{display:grid;grid-template-columns:1fr;gap:13px}
@@ -340,6 +378,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 20c.6-3.4 3-5 5.5-5s4.9 1.6 5.5 5"></path><path d="M16 5.2a3.2 3.2 0 0 1 0 6M18 15c2 .4 3.7 2 4.2 5"></path></svg>
     <span>Roster</span>
   </button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="followups">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"></path><path d="M6 4h11l-2 3.5L17 11H6"></path></svg>
+    <span>Follow-ups</span><span class="tabcount" id="fuCount" style="display:none"></span>
+  </button>
 </nav>
 
 <div class="wrap">
@@ -410,6 +452,19 @@
         <button class="btn primary" id="addWkspBtn">Add</button>
       </div>
     </div>
+  </section>
+
+  <!-- FOLLOW-UPS -->
+  <section class="panel" id="followups" role="tabpanel">
+    <div style="margin-bottom:14px">
+      <div class="eyebrow">Attendance follow-ups</div>
+      <h2 style="font-size:20px">No-shows &amp; notes</h2>
+      <p style="font-size:13px;color:var(--ink-soft);margin:.4em 0 0">
+        Anyone you mark <b>✗ No-show</b> or leave a <b>✎ note</b> on (in the Finder's Busy list)
+        collects here, grouped by day, so you can follow up. Press <b>Resolve</b> once handled.
+      </p>
+    </div>
+    <div id="fuList"></div>
   </section>
 
   <div class="foot">
@@ -513,13 +568,15 @@ if(!state.activeSession||!state.sessions[state.activeSession])
 state.roster=state.sessions[state.activeSession];
 delete state.__legacy;
 if(!state.schedule.groups) state.schedule.groups=[];
+if(!state.attendance) state.attendance={}; // key -> {day,slotTime,slotLabel,person,workshop,status,note}
 state.schedule.slots.forEach(s=>{if(!s.id)s.id="s"+Math.random().toString(36).slice(2,8);});
 let selectedSlot=state.schedule.slots.find(s=>s.id==="p1")?"p1":state.schedule.slots[0]?.id;
 
+function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance};}
 function save(){
   // keep the active session snapshot in sync with the working roster
   state.sessions[state.activeSession]=state.roster;
-  try{localStorage.setItem(LS,JSON.stringify({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule}))}catch(e){}
+  try{localStorage.setItem(LS,JSON.stringify(localPayload()))}catch(e){}
   if(window.__syncPush) window.__syncPush(); // push to the shared cloud copy, if connected
 }
 function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
@@ -527,7 +584,7 @@ function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null
 /* ---------- CLOUD SYNC BRIDGE (used by the Firebase module below) ---------- */
 window.__app={
   // the shared payload written to Firestore
-  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule}),
+  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance}),
   // apply an update that arrived from another device (never pushes back)
   applyRemote:(data)=>{
     if(!data||!data.sessions||!Object.keys(data.sessions).length) return;
@@ -536,6 +593,7 @@ window.__app={
       ? data.activeSession : Object.keys(data.sessions)[0];
     state.roster=state.sessions[state.activeSession];
     if(data.schedule) state.schedule=data.schedule;
+    state.attendance=data.attendance||{};
     if(!state.schedule.groups) state.schedule.groups=[];
     state.schedule.slots.forEach(s=>{if(!s.id)s.id=uid();});
     if(!state.schedule.slots.find(s=>s.id===selectedSlot)) selectedSlot=state.schedule.slots[0]?.id;
@@ -617,8 +675,29 @@ function analyze(slot){
 /* ---------- RENDER: FINDER ---------- */
 function render(){
   document.getElementById("dayName").textContent=state.schedule.dayName||"Today";
-  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster();
+  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster(); renderFollowups();
 }
+/* attendance clicks on the Finder result (container persists across re-renders) */
+document.getElementById("result").addEventListener("click",e=>{
+  const b=e.target.closest(".attbtn"); if(!b)return;
+  const row=b.closest(".attrow"); if(!row)return;
+  const slot=slotById(row.dataset.slot); if(!slot)return;
+  const person=row.dataset.person, wksp=row.dataset.wksp, act=b.dataset.act;
+  const cur=getAtt(slot.id,person)||{};
+  if(act==="came") setAtt(slot,person,wksp,{status:cur.status==="came"?"":"came"});
+  else if(act==="no") setAtt(slot,person,wksp,{status:cur.status==="no"?"":"no"});
+  else if(act==="note"){
+    const n=prompt("Note for "+person+" ("+wksp+"):",cur.note||"");
+    if(n===null)return; setAtt(slot,person,wksp,{note:n.trim()});
+  }
+  renderResult(); renderFollowups();
+});
+/* follow-up list actions */
+document.getElementById("fuList").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  if(b.classList.contains("fedit")) fuEdit(b.dataset.k);
+  else if(b.classList.contains("fdone")) fuResolve(b.dataset.k);
+});
 function renderSlotList(){
   const el=document.getElementById("slotlist");
   el.innerHTML='<div class="eyebrow">Pick a time slot</div>';
@@ -642,6 +721,33 @@ function personChip(p,{busy=false}={}){
   return `<span class="${cls}" title="${esc(wl.join(", "))}">`+
     (role?`<span class="role">${role}</span>`:"")+esc(p.name)+`</span>`;
 }
+/* ---------- ATTENDANCE ---------- */
+function attKey(slotId,person){return (state.schedule.dayName||"day")+"§"+slotId+"§"+person;}
+function getAtt(slotId,person){return state.attendance[attKey(slotId,person)]||null;}
+function setAtt(slot,person,workshop,patch){
+  const k=attKey(slot.id,person);
+  const cur=state.attendance[k]||{status:"",note:""};
+  Object.assign(cur,patch);
+  cur.day=state.schedule.dayName||""; cur.slotTime=slot.time||""; cur.slotLabel=slot.label||"";
+  cur.person=person; cur.workshop=workshop;
+  if(!cur.status && !(cur.note&&cur.note.trim())) delete state.attendance[k];
+  else state.attendance[k]=cur;
+  save();
+}
+function attRow(p,workshop,slot){
+  const att=getAtt(slot.id,p.name)||{};
+  const st=att.status||"", note=att.note||"";
+  return `<div class="attrow" data-slot="${esc(slot.id)}" data-person="${esc(p.name)}" data-wksp="${esc(workshop)}">`+
+    `<span class="attname">${esc(p.name)}</span>`+
+    `<span class="attbtns">`+
+      `<button class="attbtn came${st==="came"?" on":""}" data-act="came" title="Came" aria-label="Mark ${esc(p.name)} came">✓</button>`+
+      `<button class="attbtn no${st==="no"?" on":""}" data-act="no" title="No-show" aria-label="Mark ${esc(p.name)} no-show">✗</button>`+
+      `<button class="attbtn note${note?" has":""}" data-act="note" title="Add / edit note" aria-label="Note for ${esc(p.name)}">✎</button>`+
+    `</span>`+
+    (note?`<span class="attnote">${esc(note)}</span>`:"")+
+  `</div>`;
+}
+
 function renderResult(){
   const el=document.getElementById("result");
   const slot=slotById(selectedSlot);
@@ -675,13 +781,64 @@ function renderResult(){
     <div class="sectlabel"><span class="dot a"></span><h3>Standing crew — free of workshops, but hold fixed duties</h3><span class="ct">${a.freeStanding.length}</span></div>
     <div class="people">${a.freeStanding.map(p=>personChip(p)).join("")||'<span class="empty">None.</span>'}</div>
 
-    <div class="sectlabel"><span class="dot r"></span><h3>Busy — assigned to a running workshop</h3><span class="ct">${[...a.busy.values()].reduce((n,x)=>n+x.length,0)}</span></div>
+    <div class="sectlabel"><span class="dot r"></span><h3>Busy — assigned this slot · mark who came</h3><span class="ct">${[...a.busy.values()].reduce((n,x)=>n+x.length,0)}</span></div>
     <div>${[...a.busy.entries()].sort((x,y)=>x[0].localeCompare(y[0])).map(([wn,ppl])=>{
         const groups=[...(a.running.get(wn)||[])].join(", ");
         return `<div class="busygroup"><div class="bh"><b>${esc(wn)}</b><span class="where">${esc(groups)}</span></div>`+
-          `<div class="people">${ppl.map(p=>personChip(p,{busy:true})).join("")}</div></div>`;
+          `<div class="attlist">${ppl.map(p=>attRow(p,wn,slot)).join("")}</div></div>`;
       }).join("")||'<div class="empty">No workshops running this slot — everyone is free.</div>'}</div>
   `;
+}
+
+/* ---------- RENDER: FOLLOW-UPS ---------- */
+function followupItems(){
+  return Object.entries(state.attendance)
+    .map(([k,v])=>({k,...v}))
+    .filter(v=> v.status==="no" || (v.note&&String(v.note).trim()));
+}
+function renderFollowups(){
+  const items=followupItems();
+  const cnt=document.getElementById("fuCount");
+  if(cnt){ cnt.textContent=items.length?String(items.length):""; cnt.style.display=items.length?"":"none"; }
+  const list=document.getElementById("fuList"); if(!list)return;
+  if(!items.length){
+    list.innerHTML='<div class="empty" style="padding:18px">Nothing to follow up on yet. On the Finder, mark someone <b>✗ No-show</b> or add a <b>✎ note</b> and it will show up here.</div>';
+    return;
+  }
+  const byDay={};
+  items.forEach(it=>{ const d=it.day||"—"; (byDay[d]=byDay[d]||[]).push(it); });
+  let h="";
+  Object.keys(byDay).forEach(day=>{
+    h+=`<div class="fday"><span class="eyebrow">${esc(day)}</span> <span class="fcount">${byDay[day].length}</span></div>`;
+    byDay[day].sort((a,b)=>(a.person||"").localeCompare(b.person||""));
+    byDay[day].forEach(it=>{
+      const badge=it.status==="no"?`<span class="fbadge no">No-show</span>`
+        :(it.status==="came"?`<span class="fbadge ok">Came</span>`:"");
+      const meta=[it.workshop,[it.slotTime,it.slotLabel].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
+      h+=`<div class="card fitem">`+
+        `<div class="fmain"><div class="fperson">${esc(it.person||"")} ${badge}</div>`+
+        (meta?`<div class="fmeta">${esc(meta)}</div>`:"")+
+        (it.note?`<div class="fnote">${esc(it.note)}</div>`:"")+`</div>`+
+        `<div class="factions">`+
+          `<button class="btn sm fedit" data-k="${esc(it.k)}">${it.note?"Edit note":"Add note"}</button>`+
+          `<button class="btn sm fdone" data-k="${esc(it.k)}">Resolve</button>`+
+        `</div></div>`;
+    });
+  });
+  list.innerHTML=h;
+}
+function fuEdit(k){
+  const r=state.attendance[k]; if(!r)return;
+  const n=prompt("Follow-up note for "+r.person+(r.workshop?" ("+r.workshop+")":"")+":", r.note||"");
+  if(n===null)return;
+  r.note=n.trim();
+  if(!r.status && !r.note) delete state.attendance[k];
+  save(); renderFollowups(); renderResult();
+}
+function fuResolve(k){
+  if(!state.attendance[k])return;
+  delete state.attendance[k];
+  save(); renderFollowups(); renderResult();
 }
 
 /* ---------- RENDER: SCHEDULE ---------- */
