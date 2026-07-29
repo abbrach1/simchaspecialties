@@ -244,6 +244,25 @@
   .modalhead h3{font-size:17px}
   .modalcard textarea{flex:1;min-height:220px}
 
+  /* people to speak to */
+  .talkrow{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .talkrow:last-child{border-bottom:0}
+  .talkcheck{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--line);
+    background:var(--surface);cursor:pointer;color:var(--free);font-size:15px;font-weight:800;
+    display:grid;place-items:center;padding:0;transition:.12s}
+  .talkcheck:hover{border-color:var(--free)}
+  .talkcheck:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .talkrow.done .talkcheck{background:var(--free-bg);border-color:var(--free-line)}
+  .talkmain{flex:1;min-width:0}
+  .talkname{font-weight:700;font-size:14.5px}
+  .talknote{font-size:12.5px;color:var(--ink-soft);margin-top:1px}
+  .talkrow.done .talkname{text-decoration:line-through;color:var(--ink-faint)}
+  .talkrow.done .talknote{text-decoration:line-through}
+  .talkx{flex:none;border:0;background:transparent;color:var(--ink-faint);font-weight:800;
+    font-size:15px;cursor:pointer;padding:4px 6px;border-radius:6px}
+  .talkx:hover{color:var(--busy)}
+  .talkdonehead{display:flex;align-items:center;gap:8px;margin:14px 0 4px}
+
   /* follow-ups */
   .tabcount{position:absolute;top:3px;right:10px;background:var(--busy);color:#fff;font-size:10px;
     font-weight:800;min-width:17px;height:17px;border-radius:9px;display:inline-grid;place-items:center;
@@ -496,13 +515,26 @@
   <!-- FOLLOW-UPS -->
   <section class="panel" id="followups" role="tabpanel">
     <div style="margin-bottom:14px">
-      <div class="eyebrow">Attendance follow-ups</div>
-      <h2 style="font-size:20px">No-shows &amp; notes</h2>
-      <p style="font-size:13px;color:var(--ink-soft);margin:.4em 0 0">
-        Anyone you mark <b>✗ No-show</b> or leave a <b>✎ note</b> on (in the Finder's Busy list)
-        collects here, grouped by day, so you can follow up. Press <b>Resolve</b> once handled.
-      </p>
+      <div class="eyebrow">Follow-ups</div>
+      <h2 style="font-size:20px">Speak-to list &amp; attendance</h2>
     </div>
+
+    <div class="card pad" style="margin-bottom:18px">
+      <div class="eyebrow" style="margin-bottom:10px">People to speak to</div>
+      <div class="addrow" style="flex-wrap:wrap">
+        <input type="text" id="talkName" placeholder="Who? (name)" style="flex:1;min-width:140px">
+        <input type="text" id="talkNote" placeholder="About what? (optional)" style="flex:2;min-width:150px">
+        <button class="btn primary" id="talkAddBtn">Add</button>
+      </div>
+      <div id="talkList" style="margin-top:12px"></div>
+    </div>
+
+    <div class="eyebrow" style="margin-bottom:4px">Attendance</div>
+    <h3 style="font-size:16px;margin-bottom:6px">No-shows &amp; notes</h3>
+    <p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px">
+      Anyone you mark <b>✗ No-show</b> or leave a <b>✎ note</b> on (in the Finder's Busy list)
+      collects here, grouped by day. Press <b>Resolve</b> once handled.
+    </p>
     <div id="fuList"></div>
   </section>
 
@@ -641,10 +673,11 @@ delete state.__legacy;
 if(!state.schedule.groups) state.schedule.groups=[];
 if(!state.attendance) state.attendance={}; // key -> {day,slotTime,slotLabel,person,workshop,status,note}
 if(!state.assignments) state.assignments={}; // id -> {id,day,slotId,slotTime,slotLabel,activity,people[]}
+if(!Array.isArray(state.talkList)) state.talkList=[]; // [{id,name,note,done}]
 state.schedule.slots.forEach(s=>{if(!s.id)s.id="s"+Math.random().toString(36).slice(2,8);});
 let selectedSlot=state.schedule.slots.find(s=>s.id==="p1")?"p1":state.schedule.slots[0]?.id;
 
-function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments};}
+function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,talkList:state.talkList};}
 function save(){
   // keep the active session snapshot in sync with the working roster
   state.sessions[state.activeSession]=state.roster;
@@ -656,7 +689,7 @@ function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null
 /* ---------- CLOUD SYNC BRIDGE (used by the Firebase module below) ---------- */
 window.__app={
   // the shared payload written to Firestore
-  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments}),
+  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,talkList:state.talkList}),
   // apply an update that arrived from another device (never pushes back)
   applyRemote:(data)=>{
     if(!data||!data.sessions||!Object.keys(data.sessions).length) return;
@@ -667,6 +700,7 @@ window.__app={
     if(data.schedule) state.schedule=data.schedule;
     state.attendance=data.attendance||{};
     state.assignments=data.assignments||{};
+    state.talkList=Array.isArray(data.talkList)?data.talkList:[];
     if(!state.schedule.groups) state.schedule.groups=[];
     state.schedule.slots.forEach(s=>{if(!s.id)s.id=uid();});
     if(!state.schedule.slots.find(s=>s.id===selectedSlot)) selectedSlot=state.schedule.slots[0]?.id;
@@ -790,6 +824,22 @@ document.getElementById("fuList").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b)return;
   if(b.classList.contains("fedit")) fuEdit(b.dataset.k);
   else if(b.classList.contains("fdone")) fuResolve(b.dataset.k);
+});
+/* people-to-speak-to actions */
+function doAddTalk(){
+  const nm=document.getElementById("talkName"), nt=document.getElementById("talkNote");
+  if(!nm.value.trim())return;
+  addTalk(nm.value,nt.value); nm.value=""; nt.value=""; nm.focus(); renderFollowups();
+}
+document.getElementById("talkAddBtn").onclick=doAddTalk;
+document.getElementById("talkName").onkeydown=e=>{if(e.key==="Enter")doAddTalk();};
+document.getElementById("talkNote").onkeydown=e=>{if(e.key==="Enter")doAddTalk();};
+document.getElementById("talkList").addEventListener("click",e=>{
+  if(e.target.id==="talkClearDone"){ clearDoneTalk(); renderFollowups(); return; }
+  const b=e.target.closest("[data-act]"); if(!b)return;
+  if(b.dataset.act==="toggle") toggleTalk(b.dataset.id);
+  else if(b.dataset.act==="remove") removeTalk(b.dataset.id);
+  renderFollowups();
 });
 function renderSlotList(){
   const el=document.getElementById("slotlist");
@@ -966,6 +1016,40 @@ function renderResult(){
   `;
 }
 
+/* ---------- PEOPLE TO SPEAK TO ---------- */
+function addTalk(name,note){
+  name=(name||"").trim(); if(!name)return;
+  state.talkList.push({id:"t"+Math.random().toString(36).slice(2,8),name,note:(note||"").trim(),done:false});
+  save();
+}
+function toggleTalk(id){ const t=state.talkList.find(x=>x.id===id); if(t){t.done=!t.done; save();} }
+function removeTalk(id){ state.talkList=state.talkList.filter(x=>x.id!==id); save(); }
+function clearDoneTalk(){ state.talkList=state.talkList.filter(x=>!x.done); save(); }
+function talkRow(t){
+  return `<div class="talkrow${t.done?" done":""}" data-id="${t.id}">`+
+    `<button class="talkcheck" data-act="toggle" data-id="${t.id}" aria-label="${t.done?"Mark not done":"Mark done"}">${t.done?"✓":""}</button>`+
+    `<div class="talkmain"><div class="talkname">${esc(t.name)}</div>`+
+    (t.note?`<div class="talknote">${esc(t.note)}</div>`:"")+`</div>`+
+    `<button class="talkx" data-act="remove" data-id="${t.id}" aria-label="Remove">✕</button>`+
+  `</div>`;
+}
+function renderTalk(){
+  const el=document.getElementById("talkList"); if(!el)return;
+  const items=state.talkList||[];
+  const open=items.filter(t=>!t.done), done=items.filter(t=>t.done);
+  let h="";
+  if(!items.length){ h='<div class="empty" style="padding:4px 2px">No one on the list yet. Add someone above.</div>'; }
+  else{
+    h+=open.map(talkRow).join("")||'<div class="anote" style="padding:6px 2px">All caught up — nothing open.</div>';
+    if(done.length){
+      h+=`<div class="talkdonehead"><span class="eyebrow">Done (${done.length})</span><span class="agrow"></span><button class="btn sm" id="talkClearDone">Clear done</button></div>`;
+      h+=done.map(talkRow).join("");
+    }
+  }
+  el.innerHTML=h;
+  return open.length;
+}
+
 /* ---------- RENDER: FOLLOW-UPS ---------- */
 function followupItems(){
   return Object.entries(state.attendance)
@@ -973,9 +1057,11 @@ function followupItems(){
     .filter(v=> v.status==="no" || (v.note&&String(v.note).trim()));
 }
 function renderFollowups(){
+  const openTalk=renderTalk()||0;
   const items=followupItems();
+  const total=items.length+openTalk;
   const cnt=document.getElementById("fuCount");
-  if(cnt){ cnt.textContent=items.length?String(items.length):""; cnt.style.display=items.length?"":"none"; }
+  if(cnt){ cnt.textContent=total?String(total):""; cnt.style.display=total?"":"none"; }
   const list=document.getElementById("fuList"); if(!list)return;
   if(!items.length){
     list.innerHTML='<div class="empty" style="padding:18px">Nothing to follow up on yet. On the Finder, mark someone <b>✗ No-show</b> or add a <b>✎ note</b> and it will show up here.</div>';

@@ -30,6 +30,9 @@ lets you **read a photo of the schedule** and have it filled in automatically.
   person **✓ Came / ✗ No-show** and add a **✎ note**. Anyone flagged no-show or
   noted collects on the **Follow-ups** tab (grouped by day, with a live count
   badge) so you can follow up and **Resolve** each one.
+- **People to speak to** — a simple checklist on the Follow-ups tab: add a name
+  (and optional reason), check it off when done, and **Clear done**. Open items
+  count toward the tab's badge.
 
 ## Deploy to Vercel
 
