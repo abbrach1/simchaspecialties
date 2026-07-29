@@ -1640,12 +1640,15 @@ if(db){
       return;
     }
     seeded=true;
-    const data=snap.data();
-    const json=JSON.stringify(data);
-    if(json===lastJson) { setSync("ok","Synced"); return; } // our own echo
-    lastJson=json;
+    const raw=snap.data();
+    // state is stored as one JSON string ('json') to avoid Firestore's
+    // no-nested-arrays rule; fall back to the raw object for older docs.
+    const jsonStr=(raw&&typeof raw.json==="string")?raw.json:JSON.stringify(raw);
+    if(jsonStr===lastJson) { setSync("ok","Synced"); return; } // our own echo
+    lastJson=jsonStr;
+    let parsed; try{ parsed=JSON.parse(jsonStr); }catch(_){ parsed=raw; }
     applying=true;
-    try{ window.__app && window.__app.applyRemote(data); }
+    try{ window.__app && window.__app.applyRemote(parsed); }
     finally{ applying=false; }
     setSync("ok","Synced");
   }, err=>{
@@ -1656,10 +1659,10 @@ if(db){
   async function pushNow(){
     if(!window.__app) return;
     const data=window.__app.getState();
-    const json=JSON.stringify(data);
-    if(json===lastJson) return;
-    lastJson=json;
-    try{ await setDoc(ref, data); setSync("ok","Synced"); }
+    const jsonStr=JSON.stringify(data);
+    if(jsonStr===lastJson) return;
+    lastJson=jsonStr;
+    try{ await setDoc(ref, {json:jsonStr}); setSync("ok","Synced"); }
     catch(e){
       console.warn("Firestore write error:",e);
       setSync("err", e.code==="permission-denied" ? "Rules block writes" : "Save failed");
