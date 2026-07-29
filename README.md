@@ -33,6 +33,10 @@ lets you **read a photo of the schedule** and have it filled in automatically.
 - **People to speak to** — a simple checklist on the Follow-ups tab: add a name
   (and optional reason), check it off when done, and **Clear done**. Open items
   count toward the tab's badge.
+- **Rooms** — organize sleeping arrangements: staff grouped by room, move anyone
+  to another room (or a new one) with a dropdown, add/remove people, see an
+  Unassigned group, and **Copy / Share** the whole rooming list. Seeded from the
+  staff export.
 
 ## Deploy to Vercel
 

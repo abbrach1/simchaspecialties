@@ -233,6 +233,31 @@
   .person.assigned::before{background:var(--accent)}
   .person.assigned .role{color:var(--accent-strong)}
 
+  /* rooming */
+  .roomgrid{display:grid;grid-template-columns:1fr;gap:13px}
+  .roomcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow-sm);padding:13px 14px}
+  .roomcard.unassigned{border-style:dashed;border-color:var(--busy-line);background:var(--busy-bg)}
+  .roomhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    padding-bottom:9px;border-bottom:1.5px dashed var(--line)}
+  .roomhead b{font-family:var(--display);font-weight:600;font-size:16px}
+  .roomcount{flex:none;font-size:12px;font-weight:700;color:var(--accent-strong);
+    background:var(--accent-wash);padding:1px 9px;border-radius:20px;font-variant-numeric:tabular-nums}
+  .roomppl{display:flex;flex-direction:column;margin-top:9px}
+  .roomperson{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .roomperson:last-child{border-bottom:0}
+  .rpname{flex:1;min-width:0;font-weight:650;font-size:13.5px}
+  .rptype{flex:none;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+    padding:2px 7px;border-radius:20px}
+  .rptype.sp{background:var(--accent-wash);color:var(--accent-strong)}
+  .rptype.ops{background:var(--surface-3);color:var(--ink-soft)}
+  .rpmove{flex:none;width:auto;font-size:12px;padding:5px 7px;max-width:118px}
+  .rpx{flex:none;border:0;background:transparent;color:var(--ink-faint);font-weight:800;font-size:14px;
+    cursor:pointer;padding:4px 5px;border-radius:6px}
+  .rpx:hover{color:var(--busy)}
+  @media (min-width:720px){.roomgrid{grid-template-columns:1fr 1fr}}
+  @media (min-width:1000px){.roomgrid{grid-template-columns:1fr 1fr 1fr}}
+
   /* send-out modal */
   .modal{position:fixed;inset:0;z-index:100;background:rgba(12,22,16,.55);display:flex;
     align-items:center;justify-content:center;padding:16px}
@@ -396,9 +421,10 @@
     .tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;gap:4px;padding:6px 8px;
       padding-bottom:calc(6px + env(safe-area-inset-bottom));background:var(--surface);
       border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.07)}
-    .tab{flex:1;flex-direction:column;gap:3px;font-size:11px;padding:6px 4px;border-radius:12px;
-      min-height:52px}
-    .tab svg{width:23px;height:23px}
+    .tab{flex:1;flex-direction:column;gap:2px;font-size:9.5px;padding:6px 2px;border-radius:10px;
+      min-height:50px;white-space:nowrap;letter-spacing:-.01em}
+    .tab svg{width:21px;height:21px}
+    .tabcount{top:2px;right:6px;min-width:15px;height:15px;font-size:9px}
     .wrap{padding-bottom:86px}
     .resulthead h2{font-size:18px}
     .appbar .title{font-size:18px}
@@ -439,6 +465,10 @@
   <button class="tab" role="tab" aria-selected="false" data-panel="followups">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"></path><path d="M6 4h11l-2 3.5L17 11H6"></path></svg>
     <span>Follow-ups</span><span class="tabcount" id="fuCount" style="display:none"></span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="rooming">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"></path><path d="M3 21h18M9 21v-5h6v5"></path></svg>
+    <span>Rooms</span>
   </button>
 </nav>
 
@@ -536,6 +566,36 @@
       collects here, grouped by day. Press <b>Resolve</b> once handled.
     </p>
     <div id="fuList"></div>
+  </section>
+
+  <!-- ROOMING -->
+  <section class="panel" id="rooming" role="tabpanel">
+    <div class="toolbar" style="justify-content:space-between;align-items:flex-end">
+      <div>
+        <div class="eyebrow">Rooming</div>
+        <h2 style="font-size:20px">Organize rooms</h2>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="roomCopyBtn">📋 Copy</button>
+        <button class="btn" id="roomShareBtn">Share…</button>
+        <span class="msg" id="roomMsg"></span>
+      </div>
+    </div>
+    <div class="note" id="roomStats">—</div>
+    <div class="card pad" style="margin-bottom:16px">
+      <div class="eyebrow" style="margin-bottom:10px">Add someone</div>
+      <div class="addrow" style="flex-wrap:wrap">
+        <input type="text" id="roomFirst" placeholder="First name" style="flex:1;min-width:110px">
+        <input type="text" id="roomLast" placeholder="Last name" style="flex:1;min-width:110px">
+        <select id="roomType" style="width:auto"><option value="Spclty">Spclty</option><option value="Ops">Ops</option></select>
+        <input type="text" id="roomBunk" placeholder="Room #" style="width:90px">
+        <button class="btn primary" id="roomAddBtn">Add</button>
+      </div>
+    </div>
+    <div class="roomgrid" id="roomGrid"></div>
+    <div class="toolbar" style="margin-top:14px">
+      <button class="btn sm" id="resetRoomingBtn">Reset to imported list</button>
+    </div>
   </section>
 
   <div class="foot">
@@ -654,6 +714,41 @@ function defaultSchedule(){return {
  ]
 };}
 
+/* ---------- DEFAULT ROOMING (from the staff export) ---------- */
+function defaultRooming(){
+  const raw=[
+   ["Shilo","Abramowitz","Spclty","608"],["Kovi","Adler","Spclty","23"],["Binyamin","Adler","Spclty","24"],
+   ["Chaim","Adler","Spclty","606"],["Sion","Azoolay","Spclty","26"],["Yaacov","Baker","Ops","24"],
+   ["Shmuel","Baker","Spclty","25"],["Duvi","Becker","Spclty","23"],["Dovi","Berkes","Spclty","613"],
+   ["Eitan","Berlin","Ops","617"],["Yosef Hersh","Berzesky","Ops","23"],["Aryeh Leib","Brachfeld","Spclty","618"],
+   ["Charles","Breda","Spclty","25"],["Yaakov","Cohen","Spclty","25"],["Shloimie","Cytryn","Spclty","609"],
+   ["Yisroel","Davidson","Ops","602"],["Elijah","Erber","Spclty","607"],["Yoni","Farkas","Spclty","24"],
+   ["Nosson","Feigenbaum","Spclty","26"],["Yekutiel","Feiler","Spclty","605"],["Yitzchak","Feller","Spclty","24"],
+   ["Miles","Form","Spclty","606"],["Josh","Frankel","Spclty","613"],["Moshe","Friedman","Ops","602"],
+   ["Avraham","Friedman","Spclty","25"],["Eli","Friedman","Spclty","611"],["Moshe","Gewirtz","Spclty","608"],
+   ["Nachum Aryeh","Glazer","Spclty","611"],["Shlomo","Golubchik","Spclty","26"],["Tani","Gottlieb","Spclty","26"],
+   ["Shalom","Gross","Spclty","23"],["Elyon","Guttenberg","Spclty","24"],["Asher","Isaacs","Spclty","26"],
+   ["Abie","Jacoby","Spclty","24"],["Moshe","Kaplan","Ops","601"],["Yosef","Karpel","Spclty","25"],
+   ["Asher","Kasnett","Ops","601"],["Avraham","Katz","Spclty","605"],["Moshe","Koritz","Spclty","601"],
+   ["Tzvi","Langner","Spclty","609"],["Akiva","Lanner","Spclty","25"],["Jacky","Lerner","Spclty","603"],
+   ["Dovid","Lichstein","Spclty","26"],["Benjamin","Light","Spclty","24"],["Benny","London","Spclty","604"],
+   ["Ilan","Lowell","Spclty","603"],["Ari","Maimon","Spclty","603"],["Yonah","Mandel","Spclty","607"],
+   ["Tzvi","Mark","Ops","23"],["Pinchus","Melnicke","Ops","23"],["Shua","Mendlowitz","Ops","23"],
+   ["Ephraim","Meyer","Spclty","606"],["Moses","Muller","Spclty","25"],["Yosef","Okun","Spclty","25"],
+   ["Motty","Ortner","Ops","605"],["Chaim","Peppard","Spclty","23"],["Netanel","Perez","Spclty","604"],
+   ["Max","Pockriss","Spclty","606"],["Zevi","Resnick","Spclty","603"],["Ben","Rokach","Spclty","611"],
+   ["Daniel","Rosenberg","Spclty","24"],["Tzviki","Rosner","Spclty","24"],["Akiva","Rubin","Ops","609"],
+   ["Ezra","Schick","Spclty","25"],["Azriel","Shanin","Spclty","611"],["Falik","Shedrowitsky","Spclty","25"],
+   ["Shmuel","Sinensky","Spclty","26"],["Tzvi","Singer","Ops","609"],["Yaakov","Soffer","Spclty","605"],
+   ["Menachem","Sprung","Spclty","604"],["Yehuda","Statfeld","Spclty","607"],["Abraham","Steinberg","Spclty","24"],
+   ["Noey","Taub","Spclty","26"],["Evan","Teigman","Ops","602"],["Azarya","Tiger","Spclty","26"],
+   ["Eli","Toporowitz","Spclty","607"],["Avraham","Twersky","Spclty","24"],["Ezra","Weiss","Spclty","26"],
+   ["Zev","Wiesel","Spclty","604"],["Elyashiv","Yabrov","Spclty","608"],["Sid","Zacharia","Spclty","608"],
+   ["Pinny","Zanziper","Ops","602"],
+  ];
+  return raw.map((r,i)=>({id:"r"+i,first:r[0],last:r[1],type:r[2],bunk:r[3]}));
+}
+
 /* ---------- STATE ---------- */
 const LS="campSimchaCoverage_v2"; // bumped when the default roster changed (CSB -> CSSB)
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -674,10 +769,12 @@ if(!state.schedule.groups) state.schedule.groups=[];
 if(!state.attendance) state.attendance={}; // key -> {day,slotTime,slotLabel,person,workshop,status,note}
 if(!state.assignments) state.assignments={}; // id -> {id,day,slotId,slotTime,slotLabel,activity,people[]}
 if(!Array.isArray(state.talkList)) state.talkList=[]; // [{id,name,note,done}]
+if(!Array.isArray(state.rooming)) state.rooming=defaultRooming(); // [{id,first,last,type,bunk}]
+state.rooming.forEach(p=>{if(!p.id)p.id="r"+Math.random().toString(36).slice(2,8);});
 state.schedule.slots.forEach(s=>{if(!s.id)s.id="s"+Math.random().toString(36).slice(2,8);});
 let selectedSlot=state.schedule.slots.find(s=>s.id==="p1")?"p1":state.schedule.slots[0]?.id;
 
-function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,talkList:state.talkList};}
+function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,talkList:state.talkList,rooming:state.rooming};}
 function save(){
   // keep the active session snapshot in sync with the working roster
   state.sessions[state.activeSession]=state.roster;
@@ -689,7 +786,7 @@ function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null
 /* ---------- CLOUD SYNC BRIDGE (used by the Firebase module below) ---------- */
 window.__app={
   // the shared payload written to Firestore
-  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,talkList:state.talkList}),
+  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,talkList:state.talkList,rooming:state.rooming}),
   // apply an update that arrived from another device (never pushes back)
   applyRemote:(data)=>{
     if(!data||!data.sessions||!Object.keys(data.sessions).length) return;
@@ -701,6 +798,7 @@ window.__app={
     state.attendance=data.attendance||{};
     state.assignments=data.assignments||{};
     state.talkList=Array.isArray(data.talkList)?data.talkList:[];
+    if(Array.isArray(data.rooming)) state.rooming=data.rooming;
     if(!state.schedule.groups) state.schedule.groups=[];
     state.schedule.slots.forEach(s=>{if(!s.id)s.id=uid();});
     if(!state.schedule.slots.find(s=>s.id===selectedSlot)) selectedSlot=state.schedule.slots[0]?.id;
@@ -782,7 +880,7 @@ function analyze(slot){
 /* ---------- RENDER: FINDER ---------- */
 function render(){
   document.getElementById("dayName").textContent=state.schedule.dayName||"Today";
-  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster(); renderFollowups();
+  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster(); renderFollowups(); renderRooming();
 }
 /* attendance clicks on the Finder result (container persists across re-renders) */
 document.getElementById("result").addEventListener("click",e=>{
@@ -1220,6 +1318,63 @@ function addPerson(wi){
   save();renderRoster();renderSlotList();renderResult();
 }
 
+/* ---------- ROOMING ---------- */
+function roomOrder(a,b){
+  if(a==="—")return 1; if(b==="—")return -1;
+  const na=parseInt(a,10),nb=parseInt(b,10);
+  if(!isNaN(na)&&!isNaN(nb)&&na!==nb)return na-nb;
+  return String(a).localeCompare(String(b),undefined,{numeric:true});
+}
+function personDisplay(p){ return ((p.first||"")+" "+(p.last||"")).trim()||"(no name)"; }
+function roomsGrouped(){
+  const map=new Map();
+  state.rooming.forEach(p=>{ const b=(p.bunk||"").toString().trim()||"—"; if(!map.has(b))map.set(b,[]); map.get(b).push(p); });
+  return [...map.keys()].sort(roomOrder).map(r=>({room:r,
+    people:map.get(r).sort((x,y)=>((x.last||"")+" "+(x.first||"")).localeCompare((y.last||"")+" "+(y.first||"")))}));
+}
+function distinctRooms(){
+  const set=new Set(); state.rooming.forEach(p=>{const b=(p.bunk||"").toString().trim(); if(b)set.add(b);});
+  return [...set].sort(roomOrder);
+}
+function addRoomingPerson(first,last,type,bunk){
+  first=(first||"").trim(); last=(last||"").trim(); if(!first&&!last)return;
+  state.rooming.push({id:"r"+Math.random().toString(36).slice(2,8),first,last,type:type||"Spclty",bunk:(bunk||"").toString().trim()});
+  save();
+}
+function moveRoomingPerson(id,bunk){ const p=state.rooming.find(x=>x.id===id); if(p){p.bunk=(bunk||"").toString().trim(); save();} }
+function removeRoomingPerson(id){ state.rooming=state.rooming.filter(x=>x.id!==id); save(); }
+function buildRoomingText(){
+  const groups=roomsGrouped(); const lines=["Camp Simcha — Rooming",""];
+  groups.forEach(g=>{
+    lines.push((g.room==="—"?"Unassigned":"Room "+g.room)+" ("+g.people.length+")");
+    g.people.forEach(p=>lines.push("  • "+personDisplay(p)+(p.type==="Ops"?" (Ops)":"")));
+    lines.push("");
+  });
+  return lines.join("\n").trim();
+}
+function renderRooming(){
+  const grid=document.getElementById("roomGrid"); if(!grid)return;
+  const groups=roomsGrouped();
+  const unassigned=(groups.find(g=>g.room==="—")||{people:[]}).people.length;
+  const roomCount=groups.filter(g=>g.room!=="—").length;
+  const stats=document.getElementById("roomStats");
+  if(stats) stats.innerHTML=`<b>${state.rooming.length}</b> people · <b>${roomCount}</b> rooms`+(unassigned?` · <b>${unassigned}</b> unassigned`:"");
+  const rooms=distinctRooms();
+  const optionsFor=cur=>rooms.map(r=>`<option value="${esc(r)}"${r===cur?" selected":""}>Room ${esc(r)}</option>`).join("")+
+    `<option value="__none__"${!cur?" selected":""}>Unassigned</option><option value="__new__">＋ New room…</option>`;
+  grid.innerHTML=groups.map(g=>{
+    const title=g.room==="—"?"Unassigned":"Room "+esc(g.room);
+    return `<div class="roomcard${g.room==="—"?" unassigned":""}"><div class="roomhead"><b>${title}</b><span class="roomcount">${g.people.length}</span></div>`+
+      `<div class="roomppl">`+g.people.map(p=>{
+        const cur=(p.bunk||"").toString().trim();
+        return `<div class="roomperson"><span class="rpname">${esc(personDisplay(p))}</span>`+
+          `<span class="rptype ${p.type==="Ops"?"ops":"sp"}">${esc(p.type||"Spclty")}</span>`+
+          `<select class="rpmove" data-id="${p.id}" aria-label="Move ${esc(personDisplay(p))}">${optionsFor(cur)}</select>`+
+          `<button class="rpx" data-id="${p.id}" aria-label="Remove ${esc(personDisplay(p))}">✕</button></div>`;
+      }).join("")+`</div></div>`;
+  }).join("");
+}
+
 /* ---------- TABS ---------- */
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.onclick=()=>{
@@ -1395,6 +1550,40 @@ document.getElementById("addWkspBtn").onclick=()=>{
   const ty=document.getElementById("newWkspType").value;
   if(!nm)return; state.roster.push({name:nm,type:ty,loc:"—",people:[]});
   document.getElementById("newWkspName").value=""; save();renderRoster();
+};
+
+/* ---- rooming ---- */
+document.getElementById("roomAddBtn").onclick=()=>{
+  const f=document.getElementById("roomFirst"), l=document.getElementById("roomLast"),
+    t=document.getElementById("roomType"), r=document.getElementById("roomBunk");
+  if(!f.value.trim()&&!l.value.trim())return;
+  addRoomingPerson(f.value,l.value,t.value,r.value);
+  f.value=""; l.value=""; r.value=""; f.focus(); renderRooming();
+};
+document.getElementById("roomGrid").addEventListener("change",e=>{
+  const s=e.target.closest(".rpmove"); if(!s)return;
+  const id=s.dataset.id; let v=s.value;
+  if(v==="__new__"){ v=(prompt("New room number / name:","")||"").trim(); if(!v){renderRooming();return;} }
+  else if(v==="__none__"){ v=""; }
+  moveRoomingPerson(id,v); renderRooming();
+});
+document.getElementById("roomGrid").addEventListener("click",e=>{
+  const x=e.target.closest(".rpx"); if(!x)return;
+  removeRoomingPerson(x.dataset.id); renderRooming();
+});
+document.getElementById("roomCopyBtn").onclick=()=>{
+  const txt=buildRoomingText(), msg=document.getElementById("roomMsg");
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(()=>{msg.textContent="✓ Copied";msg.className="msg ok";}).catch(()=>{});
+  else {msg.textContent="Copy not supported here";msg.className="msg err";}
+};
+document.getElementById("roomShareBtn").onclick=async()=>{
+  const txt=buildRoomingText();
+  if(navigator.share){ try{ await navigator.share({title:"Camp Simcha — Rooming",text:txt}); }catch(e){} }
+  else { const msg=document.getElementById("roomMsg"); msg.textContent="Sharing not supported — use Copy."; msg.className="msg err"; }
+};
+document.getElementById("resetRoomingBtn").onclick=()=>{
+  if(!confirm("Reset rooming to the imported staff list? Your changes will be lost."))return;
+  state.rooming=defaultRooming(); save(); renderRooming();
 };
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
