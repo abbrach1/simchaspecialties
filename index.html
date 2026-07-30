@@ -204,6 +204,8 @@
   .attbtn.note.has{border-color:var(--accent);color:var(--accent-strong);background:var(--accent-wash)}
   .attnote{flex-basis:100%;font-size:12.5px;color:var(--ink-soft);background:var(--surface-2);
     border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:6px 11px}
+  .rtag{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--busy);
+    background:var(--busy-bg);border:1px solid var(--busy-line);padding:1px 6px;border-radius:20px}
 
   /* coverage assignments */
   .agrow{flex:1}
@@ -775,13 +777,14 @@ delete state.__legacy;
 if(!state.schedule.groups) state.schedule.groups=[];
 if(!state.attendance) state.attendance={}; // key -> {day,slotTime,slotLabel,person,workshop,status,note}
 if(!state.assignments) state.assignments={}; // id -> {id,day,slotId,slotTime,slotLabel,activity,people[]}
+if(!state.visits) state.visits={}; // key -> {day,slotTime,slotLabel,activity,visited,note}
 if(!Array.isArray(state.talkList)) state.talkList=[]; // [{id,name,note,done}]
 if(!Array.isArray(state.rooming)) state.rooming=defaultRooming(); // [{id,first,last,type,bunk}]
 state.rooming.forEach(p=>{if(!p.id)p.id="r"+Math.random().toString(36).slice(2,8);});
 state.schedule.slots.forEach(s=>{if(!s.id)s.id="s"+Math.random().toString(36).slice(2,8);});
 let selectedSlot=state.schedule.slots.find(s=>s.id==="p1")?"p1":state.schedule.slots[0]?.id;
 
-function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,talkList:state.talkList,rooming:state.rooming};}
+function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,visits:state.visits,talkList:state.talkList,rooming:state.rooming};}
 function save(){
   // keep the active session snapshot in sync with the working roster
   state.sessions[state.activeSession]=state.roster;
@@ -793,7 +796,7 @@ function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null
 /* ---------- CLOUD SYNC BRIDGE (used by the Firebase module below) ---------- */
 window.__app={
   // the shared payload written to Firestore
-  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,talkList:state.talkList,rooming:state.rooming}),
+  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,visits:state.visits,talkList:state.talkList,rooming:state.rooming}),
   // apply an update that arrived from another device (never pushes back)
   applyRemote:(data)=>{
     if(!data||!data.sessions||!Object.keys(data.sessions).length) return;
@@ -804,6 +807,7 @@ window.__app={
     if(data.schedule) state.schedule=data.schedule;
     state.attendance=data.attendance||{};
     state.assignments=data.assignments||{};
+    state.visits=data.visits||{};
     state.talkList=Array.isArray(data.talkList)?data.talkList:[];
     if(Array.isArray(data.rooming)) state.rooming=data.rooming;
     if(!state.schedule.groups) state.schedule.groups=[];
@@ -893,6 +897,7 @@ function render(){
 document.getElementById("result").addEventListener("click",e=>{
   const b=e.target.closest(".attbtn"); if(!b)return;
   const row=b.closest(".attrow"); if(!row)return;
+  if(!row.dataset.person)return; // visit rows (no person) are handled separately
   const slot=slotById(row.dataset.slot); if(!slot)return;
   const person=row.dataset.person, wksp=row.dataset.wksp, act=b.dataset.act;
   const cur=getAtt(slot.id,person)||{};
@@ -903,6 +908,20 @@ document.getElementById("result").addEventListener("click",e=>{
     if(n===null)return; setAtt(slot,person,wksp,{note:n.trim()});
   }
   renderResult(); renderFollowups();
+});
+/* activity-rounds (visited) clicks on the Finder result */
+document.getElementById("result").addEventListener("click",e=>{
+  const b=e.target.closest("[data-vact]"); if(!b)return;
+  const row=b.closest(".attrow"); if(!row)return;
+  const slot=slotById(row.dataset.slot); if(!slot)return;
+  const activity=row.dataset.activity;
+  const cur=getVisit(slot.id,activity)||{};
+  if(b.dataset.vact==="visit") setVisit(slot,activity,{visited:!cur.visited});
+  else if(b.dataset.vact==="note"){
+    const n=prompt("Note on "+activity+" — how's it going?",cur.note||"");
+    if(n===null)return; setVisit(slot,activity,{note:n.trim()});
+  }
+  renderResult();
 });
 /* coverage-assignment clicks on the Finder result */
 document.getElementById("result").addEventListener("click",e=>{
@@ -1072,6 +1091,30 @@ function openSendModal(){
   m.hidden=false;
 }
 
+/* ---------- ACTIVITY ROUNDS (visited an activity + note) ---------- */
+function visitKey(slotId,activity){return (state.schedule.dayName||"day")+"§"+slotId+"§"+activity;}
+function getVisit(slotId,activity){return state.visits[visitKey(slotId,activity)]||null;}
+function setVisit(slot,activity,patch){
+  const k=visitKey(slot.id,activity);
+  const cur=state.visits[k]||{visited:false,note:""};
+  Object.assign(cur,patch);
+  cur.day=state.schedule.dayName||""; cur.slotTime=slot.time||""; cur.slotLabel=slot.label||""; cur.activity=activity;
+  if(!cur.visited && !(cur.note&&cur.note.trim())) delete state.visits[k];
+  else state.visits[k]=cur;
+  save();
+}
+function visitRow(slot,activity,isSpecial){
+  const v=getVisit(slot.id,activity)||{}; const note=v.note||"";
+  return `<div class="attrow" data-slot="${esc(slot.id)}" data-activity="${esc(activity)}">`+
+    `<span class="attname">${esc(activity)}${isSpecial?' <span class="rtag">special</span>':''}</span>`+
+    `<span class="attbtns">`+
+      `<button class="attbtn came${v.visited?" on":""}" data-vact="visit" title="Mark visited" aria-label="Mark ${esc(activity)} visited">✓</button>`+
+      `<button class="attbtn note${note?" has":""}" data-vact="note" title="Note" aria-label="Note for ${esc(activity)}">✎</button>`+
+    `</span>`+
+    (note?`<span class="attnote">${esc(note)}</span>`:"")+
+  `</div>`;
+}
+
 function renderResult(){
   const el=document.getElementById("result");
   const slot=slotById(selectedSlot);
@@ -1083,6 +1126,8 @@ function renderResult(){
   const runHtml=[...a.running.keys()].sort().map(w=>`<span class="chip">${esc(w)}</span>`).join("")||`<span class="chip">No workshops running</span>`;
   const unkHtml=a.unknowns.length?`<div class="note" style="margin:12px 0 0">⚠ Not matched to the roster (treated as no-crew): <b>${a.unknowns.map(esc).join(", ")}</b>. Add these in the Roster tab if they use specialty staff.</div>`:"";
 
+  const roundsActs=[...new Set([...a.specials, ...[...a.running.keys()].sort()])];
+  const visitedCount=roundsActs.filter(act=>{const v=getVisit(slot.id,act);return v&&v.visited;}).length;
   const assignedSet=new Set(); assignmentsForSlot(slot.id).forEach(x=>x.people.forEach(n=>assignedSet.add(n)));
   const freeChip=p=> assignedSet.has(p.name)
     ? `<span class="person assigned" title="Assigned to coverage this slot"><span class="role">assigned</span>${esc(p.name)}</span>`
@@ -1099,8 +1144,8 @@ function renderResult(){
     <div>
       <div class="eyebrow" style="margin:14px 0 6px">Special activities this slot</div>
       <div class="runbar">${specialsHtml}</div>
-      <div class="eyebrow" style="margin:14px 0 6px">Workshops running (staff are busy)</div>
-      <div class="runbar">${runHtml}</div>
+      <div class="eyebrow" style="margin:16px 0 6px">Activity rounds — check off as you visit${roundsActs.length?` · <b style="color:var(--free)">${visitedCount}/${roundsActs.length}</b>`:""}</div>
+      <div class="attlist">${roundsActs.map(act=>visitRow(slot,act,a.specials.includes(act))).join("")||'<div class="empty">Nothing running this slot.</div>'}</div>
       ${unkHtml}
     </div>
 

@@ -22,6 +22,9 @@ lets you **read a photo of the schedule** and have it filled in automatically.
 - **Roster** — per-session staff lists. Add or remove people on the fly, add new
   workshops, and keep separate **sessions** (create / rename / duplicate / delete)
   so each camp session or year has its own roster.
+- **Activity rounds** — on the Finder, a check-off list of the activities running
+  in the slot: mark each **✓ Visited** as you do your rounds and add a **✎ note**
+  on how it's going, with a live "visited / total" count.
 - **Coverage assignments** — from the Finder, pick any activity in the slot that
   needs more help (special activities are suggested first), tap the **available
   people** to assign them, and hit **📋 List to send** for a copyable / shareable
