@@ -142,6 +142,12 @@
     border:1px solid var(--free-line);padding:2px 9px;border-radius:20px;
     font-variant-numeric:tabular-nums;white-space:nowrap}
   .slotbtn[aria-pressed="true"] .cnt{background:var(--accent);color:var(--brand-2);border-color:transparent}
+  .slotbtn.live-now{border-color:var(--accent)}
+  .livebadge{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.06em;padding:2px 7px;border-radius:20px;vertical-align:middle}
+  .livebadge.now{background:var(--accent);color:var(--brand-2)}
+  .livebadge.next{background:var(--surface-3);color:var(--ink-soft)}
+  .slotbtn[aria-pressed="true"] .livebadge.next{background:rgba(255,255,255,.2);color:#fff}
 
   .resulthead{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
     padding-bottom:15px;margin-bottom:4px;border-bottom:1.5px dashed var(--line)}
@@ -782,7 +788,7 @@ if(!Array.isArray(state.talkList)) state.talkList=[]; // [{id,name,note,done}]
 if(!Array.isArray(state.rooming)) state.rooming=defaultRooming(); // [{id,first,last,type,bunk}]
 state.rooming.forEach(p=>{if(!p.id)p.id="r"+Math.random().toString(36).slice(2,8);});
 state.schedule.slots.forEach(s=>{if(!s.id)s.id="s"+Math.random().toString(36).slice(2,8);});
-let selectedSlot=state.schedule.slots.find(s=>s.id==="p1")?"p1":state.schedule.slots[0]?.id;
+let selectedSlot=currentOrNextSlotId()||state.schedule.slots[0]?.id; // open on what's happening now
 
 function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,visits:state.visits,talkList:state.talkList,rooming:state.rooming};}
 function save(){
@@ -857,6 +863,53 @@ function allPeople(){
   return m;
 }
 function slotById(id){return state.schedule.slots.find(s=>s.id===id);}
+
+/* ---------- CURRENT-TIME SLOT ----------
+   Schedule times are written without am/pm ("2:00–3:00"), so each time is
+   resolved to the first reading at or after the previous slot's end, starting
+   from a 7:00am camp day. That turns 11:00→11am, 12:55→12:55pm, 2:00→2pm,
+   7:30→7:30pm without any guessing per row. */
+function dayStartMinutes(){return 7*60;} // camp day baseline for am/pm-less times
+function parseClockToken(tok){
+  const m=/(\d{1,2})\s*[:.]?\s*(\d{2})?\s*(am|pm|a|p)?/i.exec(String(tok||"").trim());
+  if(!m) return null;
+  const h=parseInt(m[1],10); if(isNaN(h)||h>12&&h>23) return null;
+  return {h:h%24, m:m[2]?parseInt(m[2],10):0, ap:(m[3]||"").toLowerCase().charAt(0)};
+}
+function tokenToMinutes(tok,after){
+  if(!tok) return null;
+  if(tok.ap){ let h=tok.h%12; if(tok.ap==="p") h+=12; return h*60+tok.m; }
+  if(tok.h>12) return tok.h*60+tok.m; // already 24h
+  const base=(tok.h%12)*60+tok.m, floor=(after==null?dayStartMinutes():after);
+  return base>=floor ? base : (base+720>=floor ? base+720 : base);
+}
+function slotRanges(){
+  const out=[]; let prev=null;
+  state.schedule.slots.forEach(s=>{
+    const parts=String(s.time||"").split(/\s*(?:–|—|-|to)\s*/i).filter(Boolean);
+    const a=parseClockToken(parts[0]), b=parts[1]?parseClockToken(parts[1]):null;
+    if(!a){ out.push({id:s.id,start:null,end:null}); return; }
+    const start=tokenToMinutes(a,prev);
+    const end=b?tokenToMinutes(b,start):start+55;
+    out.push({id:s.id,start,end});
+    prev=end;
+  });
+  return out;
+}
+function nowMinutes(){const d=new Date();return d.getHours()*60+d.getMinutes();}
+function liveSlots(){
+  const r=slotRanges(), now=nowMinutes();
+  const cur=r.find(x=>x.start!=null&&now>=x.start&&now<x.end);
+  const next=cur?null:r.find(x=>x.start!=null&&x.start>now);
+  return {nowId:cur?cur.id:null, nextId:next?next.id:null};
+}
+function currentOrNextSlotId(){
+  const {nowId,nextId}=liveSlots();
+  if(nowId) return nowId;
+  if(nextId) return nextId;
+  const timed=slotRanges().filter(x=>x.start!=null);
+  return timed.length?timed[timed.length-1].id:null; // day's over — rest on the last slot
+}
 
 /* compute free/busy for a slot */
 function analyze(slot){
@@ -965,21 +1018,33 @@ document.getElementById("talkList").addEventListener("click",e=>{
   else if(b.dataset.act==="remove") removeTalk(b.dataset.id);
   renderFollowups();
 });
+let didLiveScroll=false;
 function renderSlotList(){
   const el=document.getElementById("slotlist");
+  const {nowId,nextId}=liveSlots();
   el.innerHTML='<div class="eyebrow">Pick a time slot</div>';
   state.schedule.slots.forEach(s=>{
     const a=analyze(s);
     const freeN=a.free.length;
+    const live=s.id===nowId?"now":(s.id===nextId?"next":"");
     const b=document.createElement("button");
-    b.className="slotbtn"; b.setAttribute("aria-pressed", s.id===selectedSlot);
-    b.innerHTML=`<span><span class="st">${esc(s.time||s.label)}</span>`+
+    b.className="slotbtn"+(live?" live-"+live:""); b.setAttribute("aria-pressed", s.id===selectedSlot);
+    b.innerHTML=`<span><span class="st">${esc(s.time||s.label)}`+
+      (live?`<span class="livebadge ${live}">${live==="now"?"Now":"Next"}</span>`:"")+`</span>`+
       `<span class="sm">${esc(s.label||"")}${a.specials.length?" · ★ "+a.specials.length+" special":""}</span></span>`+
       `<span class="cnt">${freeN} free</span>`;
     b.onclick=()=>{selectedSlot=s.id;renderSlotList();renderResult();};
     el.appendChild(b);
   });
+  // on first paint, bring the auto-selected (current) slot into view
+  if(!didLiveScroll){
+    didLiveScroll=true;
+    const sel=el.querySelector('.slotbtn[aria-pressed="true"]');
+    if(sel&&sel.scrollIntoView){ try{ sel.scrollIntoView({block:"nearest",inline:"start"}); }catch(e){} }
+  }
 }
+// keep the Now/Next badges honest as the day rolls on (never changes your selection)
+setInterval(()=>{ try{ renderSlotList(); }catch(e){} },60000);
 function personChip(p,{busy=false}={}){
   const wl=p.workshops.map(x=>x.w);
   const primary=p.workshops[0];
@@ -1136,7 +1201,9 @@ function renderResult(){
   el.innerHTML=`
     <div class="resulthead">
       <div>
-        <div class="eyebrow">${esc(slot.time||"")} · ${esc(slot.label||"")}</div>
+        <div class="eyebrow">${esc(slot.time||"")} · ${esc(slot.label||"")}`+
+          (slot.id===liveSlots().nowId?` <span class="livebadge now">Now</span>`:
+           (slot.id===liveSlots().nextId?` <span class="livebadge next">Next</span>`:""))+`</div>
         <h2>Who can cover</h2>
       </div>
       <div class="bigcount"><span class="n">${a.free.length}</span><span class="lbl">specialty staff free<br>of ${a.total} total</span></div>
