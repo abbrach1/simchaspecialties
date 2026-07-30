@@ -266,6 +266,21 @@
   @media (min-width:720px){.roomgrid{grid-template-columns:1fr 1fr}}
   @media (min-width:1000px){.roomgrid{grid-template-columns:1fr 1fr 1fr}}
 
+  /* activity matcher */
+  .note.warn{background:var(--busy-bg);border-color:var(--busy-line);color:var(--ink)}
+  .matchcard{border:1.5px solid var(--line);border-radius:13px;padding:12px 13px;margin-bottom:10px;
+    background:var(--surface-2)}
+  .matchcard.auto{background:var(--surface);border-style:dashed}
+  .mtitle{font-family:var(--display);font-weight:600;font-size:15px}
+  .marrow{color:var(--ink-faint);margin:0 2px}
+  .mwhere{font-size:11.5px;color:var(--ink-faint);margin-top:1px}
+  .mquestion{font-size:12.5px;color:var(--ink);background:var(--accent-wash);border-left:3px solid var(--accent);
+    border-radius:0 8px 8px 0;padding:7px 11px;margin-top:9px}
+  .msugs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .mpct{font-size:10px;font-weight:800;color:var(--ink-faint);margin-left:4px}
+  .mrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center}
+  .mpick{flex:1;min-width:160px;font-size:13px;padding:7px 9px}
+
   /* send-out modal */
   .modal{position:fixed;inset:0;z-index:100;background:rgba(12,22,16,.55);display:flex;
     align-items:center;justify-content:center;padding:16px}
@@ -496,6 +511,7 @@
         <div class="eyebrow" style="margin-bottom:5px">Day name</div>
         <input type="text" id="dayNameInput" placeholder="e.g. Wednesday, July 22">
       </div>
+      <button class="btn" id="matchOpenBtn">🔗 Matching<span class="tabcount" id="matchCount" style="display:none;position:static;margin-left:6px;box-shadow:none"></span></button>
       <button class="btn" id="photoBtn">📷 Upload photo</button>
       <button class="btn primary" id="schedEditBtn">✎ Edit schedule</button>
       <input type="file" id="photoInput" accept="image/*" style="display:none">
@@ -609,6 +625,21 @@
   <div class="foot">
     Built for the Specialty Division · <b>Free</b> = not assigned to any workshop running in that slot.<br>
     Standing crews are shown separately since they hold fixed duties — pull them only if needed.
+  </div>
+</div>
+
+<div class="modal" id="matchModal" hidden>
+  <div class="modalcard">
+    <div class="modalhead"><h3>Match activities to workshops</h3><button class="btn sm" id="matchClose">Close</button></div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px">
+      Anything on the schedule that doesn't clearly match a workshop is listed here.
+      Link it so its staff are counted as busy — or mark it as needing coverage.
+    </p>
+    <div class="toolbar" style="margin:0 0 10px">
+      <button class="btn sm" id="matchAskAi">🤖 Ask AI to match these</button>
+      <span class="msg" id="matchMsg"></span>
+    </div>
+    <div id="matchList" style="overflow-y:auto;flex:1"></div>
   </div>
 </div>
 
@@ -784,16 +815,18 @@ if(!state.schedule.groups) state.schedule.groups=[];
 if(!state.attendance) state.attendance={}; // key -> {day,slotTime,slotLabel,person,workshop,status,note}
 if(!state.assignments) state.assignments={}; // id -> {id,day,slotId,slotTime,slotLabel,activity,people[]}
 if(!state.visits) state.visits={}; // key -> {day,slotTime,slotLabel,activity,visited,note}
+if(!state.aliases) state.aliases={}; // normalized activity -> workshop name | "__none__" | "__skip__"
 if(!Array.isArray(state.talkList)) state.talkList=[]; // [{id,name,note,done}]
 if(!Array.isArray(state.rooming)) state.rooming=defaultRooming(); // [{id,first,last,type,bunk}]
 state.rooming.forEach(p=>{if(!p.id)p.id="r"+Math.random().toString(36).slice(2,8);});
 state.schedule.slots.forEach(s=>{if(!s.id)s.id="s"+Math.random().toString(36).slice(2,8);});
 let selectedSlot=currentOrNextSlotId()||state.schedule.slots[0]?.id; // open on what's happening now
 
-function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,visits:state.visits,talkList:state.talkList,rooming:state.rooming};}
+function localPayload(){return {sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,visits:state.visits,aliases:state.aliases,talkList:state.talkList,rooming:state.rooming};}
 function save(){
   // keep the active session snapshot in sync with the working roster
   state.sessions[state.activeSession]=state.roster;
+  clearClassifyCache();
   try{localStorage.setItem(LS,JSON.stringify(localPayload()))}catch(e){}
   if(window.__syncPush) window.__syncPush(); // push to the shared cloud copy, if connected
 }
@@ -802,7 +835,7 @@ function load(){try{const r=localStorage.getItem(LS);return r?JSON.parse(r):null
 /* ---------- CLOUD SYNC BRIDGE (used by the Firebase module below) ---------- */
 window.__app={
   // the shared payload written to Firestore
-  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,visits:state.visits,talkList:state.talkList,rooming:state.rooming}),
+  getState:()=>({sessions:state.sessions,activeSession:state.activeSession,schedule:state.schedule,attendance:state.attendance,assignments:state.assignments,visits:state.visits,aliases:state.aliases,talkList:state.talkList,rooming:state.rooming}),
   // apply an update that arrived from another device (never pushes back)
   applyRemote:(data)=>{
     if(!data||!data.sessions||!Object.keys(data.sessions).length) return;
@@ -814,11 +847,13 @@ window.__app={
     state.attendance=data.attendance||{};
     state.assignments=data.assignments||{};
     state.visits=data.visits||{};
+    state.aliases=data.aliases||{};
     state.talkList=Array.isArray(data.talkList)?data.talkList:[];
     if(Array.isArray(data.rooming)) state.rooming=data.rooming;
     if(!state.schedule.groups) state.schedule.groups=[];
     state.schedule.slots.forEach(s=>{if(!s.id)s.id=uid();});
     if(!state.schedule.slots.find(s=>s.id===selectedSlot)) selectedSlot=state.schedule.slots[0]?.id;
+    clearClassifyCache();
     try{localStorage.setItem(LS,JSON.stringify(window.__app.getState()))}catch(e){}
     render();
   }
@@ -828,7 +863,7 @@ window.__app={
 function switchSession(name){
   if(!state.sessions[name])return;
   state.activeSession=name; state.roster=state.sessions[name];
-  save(); render();
+  clearClassifyCache(); save(); render();
 }
 function renderSessionBar(){
   const sel=document.getElementById("sessionSel"); if(!sel)return;
@@ -841,17 +876,111 @@ function uniqueName(base){
 
 /* ---------- HELPERS ---------- */
 function norm(s){return (s||"").toLowerCase().replace(/\s+/g," ").trim();}
+
+/* Activity-name matching.
+   normAct() strips the noise that makes the same activity look different on a
+   schedule — "(DD Resin)", "(wk2)", "(Adaptive)", filler words, punctuation —
+   so "Wood Working", "Woodworking" and "Glass Fusion (DD Resin)" line up with
+   the roster. What that doesn't catch falls through to a similarity score:
+   confident matches link automatically, borderline ones come to you. */
+function normAct(s){
+  return norm(s)
+    .replace(/\([^)]*\)/g," ")
+    .replace(/\b(dd|adaptive|wk\s*\d+|week\s*\d+)\b/g," ")
+    .replace(/[^a-z0-9 ]/g," ")
+    .replace(/\b(at|the|in|on|for|and|of|a)\b/g," ")
+    .replace(/\s+/g," ").trim();
+}
+function lev(a,b){
+  const m=a.length,n=b.length; if(!m)return n; if(!n)return m;
+  let prev=new Array(n+1),cur=new Array(n+1);
+  for(let j=0;j<=n;j++)prev[j]=j;
+  for(let i=1;i<=m;i++){
+    cur[0]=i;
+    for(let j=1;j<=n;j++){
+      cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    }
+    const t=prev;prev=cur;cur=t;
+  }
+  return prev[n];
+}
+function simRatio(a,b){ if(!a||!b)return 0; return 1-lev(a,b)/Math.max(a.length,b.length); }
+function tokenScore(a,b){
+  const A=a.split(" ").filter(Boolean),B=b.split(" ").filter(Boolean);
+  if(!A.length||!B.length)return 0;
+  let hit=0;
+  A.forEach(t=>{ if(B.some(u=>u===t||(t.length>3&&u.length>3&&simRatio(t,u)>=0.8))) hit++; });
+  return hit/Math.max(A.length,B.length);
+}
+function matchScore(a,b){
+  const flat=simRatio(a.replace(/ /g,""),b.replace(/ /g,""));
+  // matching token-by-token is strong evidence, but on its own it can't claim a
+  // perfect score — the letters have to broadly agree too.
+  const tok=Math.min(tokenScore(a,b), 0.5+0.5*flat);
+  return Math.max(simRatio(a,b), flat, tok);
+}
+/* Looser score, used only to offer suggestions — never to link on its own.
+   Lets a short name ("Bakeing") still point at a long one ("Baking/Challah Baking"). */
+function coverageScore(a,b){
+  const A=a.split(" ").filter(Boolean),B=b.split(" ").filter(Boolean);
+  if(!A.length||!B.length)return 0;
+  const short=A.length<=B.length?A:B, long=A.length<=B.length?B:A;
+  let sum=0;
+  short.forEach(t=>{
+    let best=0;
+    long.forEach(u=>{ const s=(t===u)?1:((t.length>3&&u.length>3)?simRatio(t,u):0); if(s>best)best=s; });
+    sum+=best;
+  });
+  return sum/short.length;
+}
+const AUTO_LINK=0.87, ASK_ABOVE=0.55;
+function rosterIndex(){
+  const byNorm={},list=[];
+  state.roster.forEach(w=>{ const k=normAct(w.name); if(k){ if(!byNorm[k])byNorm[k]=w.name; list.push({name:w.name,key:k,staff:w.people.length}); } });
+  return {byNorm,list};
+}
+function suggestionsFor(key,idx){
+  return idx.list.map(x=>({name:x.name,staff:x.staff,
+      score:Math.max(matchScore(key,x.key),coverageScore(key,x.key))}))
+    .filter(x=>x.score>=ASK_ABOVE).sort((p,q)=>q.score-p.score).slice(0,3);
+}
+function strictBest(key,idx){
+  let best=null;
+  idx.list.forEach(x=>{ const s=matchScore(key,x.key); if(!best||s>best.score) best={name:x.name,score:s}; });
+  return best;
+}
+function findWorkshop(name){ return state.roster.find(w=>w.name===name); }
+
+let _clsCache=new Map();
+function clearClassifyCache(){ _clsCache.clear(); }
 function classify(act){
-  const n=norm(act);
-  if(!n) return {kind:"none"};
+  const raw=String(act==null?"":act);
+  if(_clsCache.has(raw)) return _clsCache.get(raw);
+  const r=classifyUncached(raw);
+  _clsCache.set(raw,r);
+  return r;
+}
+function classifyUncached(act){
+  const n=norm(act); if(!n) return {kind:"none"};
+  const key=normAct(act);
+  // 1. a decision you (or the AI) already confirmed
+  const dec=state.aliases&&state.aliases[key];
+  if(dec==="__none__") return {kind:"special",decided:true};
+  if(dec==="__skip__") return {kind:"break",decided:true};
+  if(dec&&findWorkshop(dec)) return {kind:"workshop",name:dec,decided:true};
+  // 2. exact matches
   if(ALIAS[n]) return {kind:"workshop",name:ALIAS[n]};
+  const idx=rosterIndex();
+  if(idx.byNorm[key]) return {kind:"workshop",name:idx.byNorm[key]};
+  if(ALIAS[key]) return {kind:"workshop",name:ALIAS[key]};
   for(const k in ALIAS){ if(n.startsWith(k)) return {kind:"workshop",name:ALIAS[k]}; }
+  // 3. known non-workshop activities
   if(SPECIAL.some(w=>n.includes(w))) return {kind:"special"};
   if(BREAKS.some(w=>n.includes(w))) return {kind:"break"};
-  // try exact roster name
-  const w=state.roster.find(x=>norm(x.name)===n);
-  if(w) return {kind:"workshop",name:w.name};
-  return {kind:"unknown"};
+  // 4. close enough to decide on its own, or worth asking about
+  const strict=strictBest(key,idx);
+  if(strict&&strict.score>=AUTO_LINK) return {kind:"workshop",name:strict.name,auto:true,score:strict.score};
+  return {kind:"unknown",suggestions:suggestionsFor(key,idx)};
 }
 function allPeople(){
   const m=new Map(); // name -> {name, workshops:Set, standing:bool}
@@ -980,6 +1109,7 @@ document.getElementById("result").addEventListener("click",e=>{
 document.getElementById("result").addEventListener("click",e=>{
   const slot=slotById(selectedSlot); if(!slot)return;
   const t=e.target;
+  if(t.closest("#matchFromFinder")){ openMatcher(); return; }
   if(t.closest("#sendOpen")){ openSendModal(); return; }
   if(t.closest("#newAssignBtn")){
     const sel=document.getElementById("newAssignActivity"); let act=sel?sel.value:"";
@@ -1189,7 +1319,10 @@ function renderResult(){
     ? a.specials.map(s=>`<span class="chip special">${esc(s)}</span>`).join("")
     : `<span class="chip">No special activity flagged</span>`;
   const runHtml=[...a.running.keys()].sort().map(w=>`<span class="chip">${esc(w)}</span>`).join("")||`<span class="chip">No workshops running</span>`;
-  const unkHtml=a.unknowns.length?`<div class="note" style="margin:12px 0 0">⚠ Not matched to the roster (treated as no-crew): <b>${a.unknowns.map(esc).join(", ")}</b>. Add these in the Roster tab if they use specialty staff.</div>`:"";
+  const noStaff=[...a.running.keys()].filter(w=>{const x=findWorkshop(w);return x&&!x.people.length;});
+  const unkHtml=(a.unknowns.length?`<div class="note warn" style="margin:12px 0 0">⚠ <b>${a.unknowns.map(esc).join(", ")}</b> — not matched to any workshop, so nobody is counted busy for it. `+
+      `<button class="btn sm" id="matchFromFinder" style="margin-top:8px">🔗 Match activities</button></div>`:"")+
+    (noStaff.length?`<div class="note" style="margin:12px 0 0">ℹ <b>${noStaff.map(esc).join(", ")}</b> — matched, but no staff are on the roster for it yet.</div>`:"");
 
   const roundsActs=[...new Set([...a.specials, ...[...a.running.keys()].sort()])];
   const visitedCount=roundsActs.filter(act=>{const v=getVisit(slot.id,act);return v&&v.visited;}).length;
@@ -1267,6 +1400,72 @@ function renderTalk(){
   return open.length;
 }
 
+/* ---------- ACTIVITY MATCHING ---------- */
+let aiSuggest={}; // transient: activity -> {workshop,confidence,question} from the AI pass
+function activityUsage(){
+  const m=new Map();
+  state.schedule.slots.forEach(s=>s.entries.forEach(e=>{
+    const k=String(e.a||"").trim(); if(!k)return;
+    if(!m.has(k)) m.set(k,new Set());
+    m.get(k).add(s.time||s.label||"a slot");
+  }));
+  return m;
+}
+function matcherItems(){
+  const usage=activityUsage(), unresolved=[], auto=[];
+  usage.forEach((slots,a)=>{
+    const c=classify(a);
+    if(c.kind==="unknown") unresolved.push({a,slots:[...slots],suggestions:c.suggestions||[]});
+    else if(c.auto) auto.push({a,slots:[...slots],name:c.name,score:c.score});
+  });
+  const byName=(x,y)=>x.a.localeCompare(y.a);
+  return {unresolved:unresolved.sort(byName),auto:auto.sort(byName)};
+}
+function unresolvedCount(){ return matcherItems().unresolved.length; }
+function setAlias(activity,target){
+  const k=normAct(activity); if(!k)return;
+  if(target==null) delete state.aliases[k]; else state.aliases[k]=target;
+  save(); render(); renderMatcher();
+}
+function workshopOptions(sel){
+  return `<option value="">Choose a workshop…</option>`+
+    state.roster.map(w=>`<option value="${esc(w.name)}"${w.name===sel?" selected":""}>${esc(w.name)}${w.people.length?"":" (no staff)"}</option>`).join("");
+}
+function renderMatcher(){
+  const el=document.getElementById("matchList"); if(!el)return;
+  const {unresolved,auto}=matcherItems();
+  let h="";
+  if(!unresolved.length) h+='<div class="note" style="margin:0 0 12px">✓ Everything on the schedule is matched.</div>';
+  unresolved.forEach(it=>{
+    const ai=aiSuggest[it.a];
+    const sugs=it.suggestions.slice();
+    if(ai&&ai.workshop&&!sugs.some(s=>s.name===ai.workshop)) sugs.unshift({name:ai.workshop,score:ai.confidence||0,fromAi:true});
+    h+=`<div class="matchcard" data-a="${esc(it.a)}">`+
+      `<div class="mtitle">${esc(it.a)}</div>`+
+      `<div class="mwhere">on ${esc(it.slots.join(", "))}</div>`+
+      (ai&&ai.question?`<div class="mquestion">🤖 ${esc(ai.question)}</div>`:"")+
+      (sugs.length?`<div class="msugs">`+sugs.map(s=>
+        `<button class="btn sm msug" data-a="${esc(it.a)}" data-w="${esc(s.name)}">Link to ${esc(s.name)}`+
+        (s.score?` <span class="mpct">${Math.round(s.score*100)}%</span>`:"")+`</button>`).join("")+`</div>`
+        :`<div class="anote" style="margin:8px 0">No close workshop found.</div>`)+
+      `<div class="mrow"><select class="mpick" data-a="${esc(it.a)}">${workshopOptions("")}</select>`+
+      `<button class="btn sm mnone" data-a="${esc(it.a)}">No staff — needs coverage</button>`+
+      `<button class="btn sm mskip" data-a="${esc(it.a)}">Not an activity</button></div>`+
+    `</div>`;
+  });
+  if(auto.length){
+    h+=`<div class="talkdonehead"><span class="eyebrow">Matched automatically (${auto.length})</span></div>`;
+    auto.forEach(it=>{
+      h+=`<div class="matchcard auto"><div class="mtitle">${esc(it.a)} <span class="marrow">→</span> ${esc(it.name)}`+
+        `<span class="mpct">${Math.round(it.score*100)}%</span></div>`+
+        `<div class="mrow"><select class="mpick" data-a="${esc(it.a)}">${workshopOptions(it.name)}</select>`+
+        `<button class="btn sm mnone" data-a="${esc(it.a)}">No staff</button></div></div>`;
+    });
+  }
+  el.innerHTML=h;
+}
+function openMatcher(){ const m=document.getElementById("matchModal"); if(!m)return; renderMatcher(); m.hidden=false; }
+
 /* ---------- RENDER: FOLLOW-UPS ---------- */
 function followupItems(){
   return Object.entries(state.attendance)
@@ -1337,6 +1536,8 @@ function renderSchedule(){
   const inp=document.getElementById("dayNameInput");
   if(inp&&document.activeElement!==inp) inp.value=state.schedule.dayName||"";
   renderActOptions();
+  const mc=document.getElementById("matchCount");
+  if(mc){ const n=unresolvedCount(); mc.textContent=n?String(n):""; mc.style.display=n?"inline-grid":"none"; }
   document.getElementById("schedEditBtn").textContent=scheduleEditMode?"✓ Done editing":"✎ Edit schedule";
   document.getElementById("schedView").innerHTML=scheduleEditMode?schedEditorHtml():schedTableHtml();
 }
@@ -1649,6 +1850,53 @@ schedView.addEventListener("change",e=>{
   }
 });
 function refreshFinder(){renderSlotList();renderResult();}
+/* activity matcher */
+document.getElementById("matchClose").onclick=()=>{document.getElementById("matchModal").hidden=true;};
+document.getElementById("matchModal").onclick=e=>{ if(e.target.id==="matchModal") e.currentTarget.hidden=true; };
+document.getElementById("matchList").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  const a=b.dataset.a; if(!a)return;
+  if(b.classList.contains("msug")) setAlias(a,b.dataset.w);
+  else if(b.classList.contains("mnone")) setAlias(a,"__none__");
+  else if(b.classList.contains("mskip")) setAlias(a,"__skip__");
+});
+document.getElementById("matchList").addEventListener("change",e=>{
+  const s=e.target.closest(".mpick"); if(!s||!s.value)return;
+  setAlias(s.dataset.a,s.value);
+});
+document.getElementById("matchAskAi").onclick=async()=>{
+  const msg=document.getElementById("matchMsg");
+  const {unresolved}=matcherItems();
+  if(!unresolved.length){ msg.textContent="Nothing left to match."; msg.className="msg ok"; return; }
+  msg.textContent="🤖 Asking…"; msg.className="msg";
+  try{
+    const resp=await fetch("/api/match-activities",{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({
+        activities:unresolved.map(u=>u.a),
+        workshops:state.roster.map(w=>({name:w.name,staff:w.people.length}))
+      })
+    });
+    let d; try{d=await resp.json();}catch(_){d=null;}
+    if(!resp.ok||!d||d.error){ msg.textContent=(d&&d.error)||("Server error "+resp.status); msg.className="msg err"; return; }
+    let linked=0,asked=0;
+    (d.matches||[]).forEach(m=>{
+      if(!m||!m.activity)return;
+      aiSuggest[m.activity]={workshop:m.workshop||null,confidence:m.confidence||0,question:m.question||""};
+      // only auto-apply when the AI is confident; anything else comes to you
+      if(m.workshop&&findWorkshop(m.workshop)&&(m.confidence||0)>=0.9&&!m.question){ setAlias(m.activity,m.workshop); linked++; }
+      else asked++;
+    });
+    msg.textContent=`✓ Linked ${linked}`+(asked?` · ${asked} need your call`:"");
+    msg.className="msg ok";
+    renderMatcher();
+  }catch(err){
+    msg.textContent="Couldn't reach the AI matcher (works on the deployed site with an API key).";
+    msg.className="msg err";
+  }
+};
+document.getElementById("matchOpenBtn").onclick=openMatcher;
+
 /* send-out modal */
 document.getElementById("sendClose").onclick=()=>{document.getElementById("sendModal").hidden=true;};
 document.getElementById("sendModal").onclick=e=>{ if(e.target.id==="sendModal") e.currentTarget.hidden=true; };

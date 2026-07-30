@@ -22,6 +22,13 @@ lets you **read a photo of the schedule** and have it filled in automatically.
 - **Roster** — per-session staff lists. Add or remove people on the fly, add new
   workshops, and keep separate **sessions** (create / rename / duplicate / delete)
   so each camp session or year has its own roster.
+- **Activity matching** — schedule names rarely match the roster exactly. Obvious
+  variants ("Wood Working", "Glass Fusion (DD Resin)", "Rope Corse") link
+  themselves; anything genuinely uncertain is collected under **🔗 Matching**,
+  where you confirm a suggestion, pick a workshop, or mark it as needing
+  coverage. Your choices are remembered and synced. On the deployed site,
+  **Ask AI to match these** proposes the leftovers — it only applies matches it
+  is confident about and asks you about the rest.
 - **Activity rounds** — on the Finder, a check-off list of the activities running
   in the slot: mark each **✓ Visited** as you do your rounds and add a **✎ note**
   on how it's going, with a live "visited / total" count.
