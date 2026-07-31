@@ -32,6 +32,10 @@ lets you **read a photo of the schedule** and have it filled in automatically.
 - **Activity rounds** — on the Finder, a check-off list of the activities running
   in the slot: mark each **✓ Visited** as you do your rounds and add a **✎ note**
   on how it's going, with a live "visited / total" count.
+- **Notes** — every note from your rounds collected in one tab, grouped by day
+  (newest first) with the activity and time slot. Add more notes to the same
+  activity as things develop, **Mark done** once handled (a new note reopens it),
+  and **Clear done** to tidy up. The tab badge counts what's still open.
 - **Coverage assignments** — from the Finder, pick any activity in the slot that
   needs more help (special activities are suggested first), tap the **available
   people** to assign them, and hit **📋 List to send** for a copyable / shareable

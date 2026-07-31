@@ -61,7 +61,7 @@
     --shadow-sm:0 1px 2px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box}
-  html,body{margin:0}
+  html,body{margin:0;overflow-x:clip}
   body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;
     font-size:15px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     min-height:100vh}
@@ -91,7 +91,7 @@
   .sync.ok .syncdot{background:#7fdca0}
   .sync.wait .syncdot{background:#e4d38a}
   .sync.err .syncdot{background:var(--accent)}
-  .appbar .day{display:flex;flex-direction:column;align-items:flex-end;
+  .appbar .day{display:flex;flex-direction:column;align-items:flex-end;min-width:0;overflow:hidden;
     background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.14);border-radius:12px;
     padding:6px 12px;max-width:46%}
   .appbar .day .daylabel{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
@@ -265,6 +265,23 @@
   .rpx:hover{color:var(--busy)}
   @media (min-width:720px){.roomgrid{grid-template-columns:1fr 1fr}}
   @media (min-width:1000px){.roomgrid{grid-template-columns:1fr 1fr 1fr}}
+
+  /* notes tab */
+  .notecard{padding:13px 14px;margin-bottom:10px}
+  .notecard.done{opacity:.62}
+  .nhead{display:flex;align-items:flex-start;gap:8px;margin-bottom:9px}
+  .nact{font-family:var(--display);font-weight:600;font-size:15.5px}
+  .nnotes{display:flex;flex-direction:column;gap:6px}
+  .nnote{display:flex;align-items:flex-start;gap:8px;background:var(--surface-2);
+    border-left:3px solid var(--accent);border-radius:0 9px 9px 0;padding:8px 10px}
+  .ntext{flex:1;min-width:0;font-size:13.5px;line-height:1.45}
+  .notecard.done .ntext{text-decoration:line-through}
+  .nwhen{flex:none;font-size:10.5px;color:var(--ink-faint);font-weight:600;padding-top:2px;
+    font-variant-numeric:tabular-nums}
+  .nx{flex:none;border:0;background:transparent;color:var(--ink-faint);font-weight:800;font-size:13px;
+    cursor:pointer;padding:2px 4px;border-radius:5px}
+  .nx:hover{color:var(--busy)}
+  .attnote b{color:var(--accent-strong)}
 
   /* activity matcher */
   .note.warn{background:var(--busy-bg);border-color:var(--busy-line);color:var(--ink)}
@@ -444,16 +461,17 @@
     .tabs{position:fixed;left:0;right:0;bottom:0;z-index:60;gap:4px;padding:6px 8px;
       padding-bottom:calc(6px + env(safe-area-inset-bottom));background:var(--surface);
       border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.07)}
-    .tab{flex:1;flex-direction:column;gap:2px;font-size:9.5px;padding:6px 2px;border-radius:10px;
-      min-height:50px;white-space:nowrap;letter-spacing:-.01em}
-    .tab svg{width:21px;height:21px}
-    .tabcount{top:2px;right:6px;min-width:15px;height:15px;font-size:9px}
+    .tab{flex:1;flex-direction:column;gap:2px;font-size:8.5px;padding:6px 1px;border-radius:9px;
+      min-height:50px;white-space:nowrap;letter-spacing:-.02em;min-width:0}
+    .tab svg{width:20px;height:20px}
+    .tab span:not(.tabcount){overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .tabcount{top:1px;right:3px;min-width:14px;height:14px;font-size:8.5px}
     .wrap{padding-bottom:86px}
     .resulthead h2{font-size:18px}
     .appbar .title{font-size:18px}
     .sync .synctext{display:none}
     .sync{padding:6px}
-    .appbar .day{max-width:40vw}
+    .appbar .day{max-width:34vw;padding:6px 9px}
   }
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -488,6 +506,10 @@
   <button class="tab" role="tab" aria-selected="false" data-panel="followups">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"></path><path d="M6 4h11l-2 3.5L17 11H6"></path></svg>
     <span>Follow-ups</span><span class="tabcount" id="fuCount" style="display:none"></span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="notes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5h14v17l-3.5-2.5-3.5 2.5-3.5-2.5L5 20.5z"></path><path d="M9 8h6M9 12h6"></path></svg>
+    <span>Notes</span><span class="tabcount" id="notesCount" style="display:none"></span>
   </button>
   <button class="tab" role="tab" aria-selected="false" data-panel="rooming">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"></path><path d="M3 21h18M9 21v-5h6v5"></path></svg>
@@ -590,6 +612,19 @@
       collects here, grouped by day. Press <b>Resolve</b> once handled.
     </p>
     <div id="fuList"></div>
+  </section>
+
+  <!-- NOTES -->
+  <section class="panel" id="notes" role="tabpanel">
+    <div style="margin-bottom:14px">
+      <div class="eyebrow">Activity notes</div>
+      <h2 style="font-size:20px">What needs action</h2>
+      <p style="font-size:13px;color:var(--ink-soft);margin:.4em 0 0">
+        Every note you leave while doing rounds, newest day first. Add more as things develop,
+        then <b>Mark done</b> once it's handled.
+      </p>
+    </div>
+    <div id="notesList"></div>
   </section>
 
   <!-- ROOMING -->
@@ -816,6 +851,7 @@ if(!state.attendance) state.attendance={}; // key -> {day,slotTime,slotLabel,per
 if(!state.assignments) state.assignments={}; // id -> {id,day,slotId,slotTime,slotLabel,activity,people[]}
 if(!state.visits) state.visits={}; // key -> {day,slotTime,slotLabel,activity,visited,note}
 if(!state.aliases) state.aliases={}; // normalized activity -> workshop name | "__none__" | "__skip__"
+migrateVisits();
 if(!Array.isArray(state.talkList)) state.talkList=[]; // [{id,name,note,done}]
 if(!Array.isArray(state.rooming)) state.rooming=defaultRooming(); // [{id,first,last,type,bunk}]
 state.rooming.forEach(p=>{if(!p.id)p.id="r"+Math.random().toString(36).slice(2,8);});
@@ -847,6 +883,7 @@ window.__app={
     state.attendance=data.attendance||{};
     state.assignments=data.assignments||{};
     state.visits=data.visits||{};
+    migrateVisits();
     state.aliases=data.aliases||{};
     state.talkList=Array.isArray(data.talkList)?data.talkList:[];
     if(Array.isArray(data.rooming)) state.rooming=data.rooming;
@@ -1073,7 +1110,7 @@ function analyze(slot){
 /* ---------- RENDER: FINDER ---------- */
 function render(){
   document.getElementById("dayName").textContent=state.schedule.dayName||"Today";
-  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster(); renderFollowups(); renderRooming();
+  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster(); renderFollowups(); renderNotes(); renderRooming();
 }
 /* attendance clicks on the Finder result (container persists across re-renders) */
 document.getElementById("result").addEventListener("click",e=>{
@@ -1098,12 +1135,12 @@ document.getElementById("result").addEventListener("click",e=>{
   const slot=slotById(row.dataset.slot); if(!slot)return;
   const activity=row.dataset.activity;
   const cur=getVisit(slot.id,activity)||{};
-  if(b.dataset.vact==="visit") setVisit(slot,activity,{visited:!cur.visited});
+  if(b.dataset.vact==="visit") toggleVisited(slot,activity);
   else if(b.dataset.vact==="note"){
-    const n=prompt("Note on "+activity+" — how's it going?",cur.note||"");
-    if(n===null)return; setVisit(slot,activity,{note:n.trim()});
+    const n=prompt("Add a note on "+activity+" — how's it going?","");
+    if(n===null||!n.trim())return; addVisitNote(slot,activity,n);
   }
-  renderResult();
+  renderResult(); renderNotes();
 });
 /* coverage-assignment clicks on the Finder result */
 document.getElementById("result").addEventListener("click",e=>{
@@ -1132,6 +1169,28 @@ document.getElementById("fuList").addEventListener("click",e=>{
   if(b.classList.contains("fedit")) fuEdit(b.dataset.k);
   else if(b.classList.contains("fdone")) fuResolve(b.dataset.k);
 });
+/* notes tab actions */
+document.getElementById("notesList").addEventListener("click",e=>{
+  if(e.target.id==="notesClearDone"){
+    if(!confirm("Remove all notes marked done?"))return;
+    noteEntries().filter(v=>v.done).forEach(v=>deleteNoteEntry(v.k));
+    renderNotes(); renderResult(); return;
+  }
+  const x=e.target.closest(".nx");
+  if(x){ deleteNote(x.dataset.k,x.dataset.n); renderNotes(); renderResult(); return; }
+  const b=e.target.closest("button[data-k]"); if(!b)return;
+  const k=b.dataset.k, v=state.visits[k];
+  if(b.classList.contains("nadd")){
+    const n=prompt("Add a note"+(v&&v.activity?" on "+v.activity:"")+":","");
+    if(n===null||!n.trim())return; addNoteToEntry(k,n);
+  }
+  else if(b.classList.contains("ndone")) toggleNoteDone(k);
+  else if(b.classList.contains("ndel")){
+    if(!confirm("Delete this activity's notes?"))return; deleteNoteEntry(k);
+  }
+  renderNotes(); renderResult();
+});
+
 /* people-to-speak-to actions */
 function doAddTalk(){
   const nm=document.getElementById("talkName"), nt=document.getElementById("talkNote");
@@ -1286,27 +1345,57 @@ function openSendModal(){
   m.hidden=false;
 }
 
-/* ---------- ACTIVITY ROUNDS (visited an activity + note) ---------- */
+/* ---------- ACTIVITY ROUNDS (visited an activity + notes) ---------- */
 function visitKey(slotId,activity){return (state.schedule.dayName||"day")+"§"+slotId+"§"+activity;}
 function getVisit(slotId,activity){return state.visits[visitKey(slotId,activity)]||null;}
-function setVisit(slot,activity,patch){
+function nid(){return "n"+Math.random().toString(36).slice(2,8);}
+/* notes started life as a single string; keep older/synced records working */
+function migrateVisits(){
+  Object.values(state.visits||{}).forEach(v=>{
+    if(!Array.isArray(v.notes)){
+      v.notes = (v.note&&String(v.note).trim()) ? [{id:nid(),text:String(v.note).trim(),at:null}] : [];
+    }
+    delete v.note;
+    if(typeof v.done!=="boolean") v.done=false;
+  });
+}
+function stampVisit(rec,slot,activity){
+  rec.day=state.schedule.dayName||""; rec.slotTime=slot.time||"";
+  rec.slotLabel=slot.label||""; rec.activity=activity;
+}
+function visitRecord(slot,activity){
   const k=visitKey(slot.id,activity);
-  const cur=state.visits[k]||{visited:false,note:""};
-  Object.assign(cur,patch);
-  cur.day=state.schedule.dayName||""; cur.slotTime=slot.time||""; cur.slotLabel=slot.label||""; cur.activity=activity;
-  if(!cur.visited && !(cur.note&&cur.note.trim())) delete state.visits[k];
-  else state.visits[k]=cur;
-  save();
+  const cur=state.visits[k]||{visited:false,notes:[],done:false};
+  if(!Array.isArray(cur.notes)) cur.notes=[];
+  return {k,cur};
+}
+function pruneVisit(k){
+  const v=state.visits[k];
+  if(v && !v.visited && !(v.notes&&v.notes.length)) delete state.visits[k];
+}
+function toggleVisited(slot,activity){
+  const {k,cur}=visitRecord(slot,activity);
+  cur.visited=!cur.visited; stampVisit(cur,slot,activity);
+  state.visits[k]=cur; pruneVisit(k); save();
+}
+function addVisitNote(slot,activity,text){
+  text=(text||"").trim(); if(!text)return;
+  const {k,cur}=visitRecord(slot,activity);
+  cur.notes.push({id:nid(),text,at:Date.now()});
+  cur.done=false; // a new note reopens it
+  stampVisit(cur,slot,activity); state.visits[k]=cur; save();
 }
 function visitRow(slot,activity,isSpecial){
-  const v=getVisit(slot.id,activity)||{}; const note=v.note||"";
+  const v=getVisit(slot.id,activity)||{}; const notes=v.notes||[];
+  const last=notes.length?notes[notes.length-1].text:"";
   return `<div class="attrow" data-slot="${esc(slot.id)}" data-activity="${esc(activity)}">`+
     `<span class="attname">${esc(activity)}${isSpecial?' <span class="rtag">special</span>':''}</span>`+
     `<span class="attbtns">`+
       `<button class="attbtn came${v.visited?" on":""}" data-vact="visit" title="Mark visited" aria-label="Mark ${esc(activity)} visited">✓</button>`+
-      `<button class="attbtn note${note?" has":""}" data-vact="note" title="Note" aria-label="Note for ${esc(activity)}">✎</button>`+
+      `<button class="attbtn note${notes.length?" has":""}" data-vact="note" title="Add a note" aria-label="Add a note for ${esc(activity)}">✎</button>`+
     `</span>`+
-    (note?`<span class="attnote">${esc(note)}</span>`:"")+
+    (last?`<span class="attnote">${esc(last)}`+
+      (notes.length>1?` <b>+${notes.length-1} more</b>`:"")+`</span>`:"")+
   `</div>`;
 }
 
@@ -1398,6 +1487,78 @@ function renderTalk(){
   }
   el.innerHTML=h;
   return open.length;
+}
+
+/* ---------- NOTES (every visit note, across all days) ---------- */
+function noteEntries(){
+  return Object.entries(state.visits||{})
+    .map(([k,v])=>({k,...v}))
+    .filter(v=>Array.isArray(v.notes)&&v.notes.length);
+}
+function openNoteCount(){ return noteEntries().filter(v=>!v.done).length; }
+function lastNoteAt(v){ return v.notes.reduce((mx,n)=>Math.max(mx,n.at||0),0); }
+function noteTime(at){
+  if(!at) return "";
+  try{ return new Date(at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}); }catch(e){ return ""; }
+}
+function addNoteToEntry(k,text){
+  text=(text||"").trim(); if(!text)return;
+  const v=state.visits[k]; if(!v)return;
+  if(!Array.isArray(v.notes)) v.notes=[];
+  v.notes.push({id:nid(),text,at:Date.now()}); v.done=false; save();
+}
+function toggleNoteDone(k){ const v=state.visits[k]; if(!v)return; v.done=!v.done; save(); }
+function deleteNote(k,noteId){
+  const v=state.visits[k]; if(!v)return;
+  v.notes=(v.notes||[]).filter(n=>n.id!==noteId);
+  pruneVisit(k); save();
+}
+function deleteNoteEntry(k){ delete state.visits[k]; save(); }
+function renderNotes(){
+  const badge=document.getElementById("notesCount");
+  const open=openNoteCount();
+  if(badge){ badge.textContent=open?String(open):""; badge.style.display=open?"":"none"; }
+  const el=document.getElementById("notesList"); if(!el)return;
+  const all=noteEntries();
+  if(!all.length){
+    el.innerHTML='<div class="empty" style="padding:18px">No notes yet. On the Finder, use the <b>✎</b> button in <b>Activity rounds</b> to jot how an activity is going, and it will collect here.</div>';
+    return;
+  }
+  const openList=all.filter(v=>!v.done), doneList=all.filter(v=>v.done);
+  const byDay=new Map();
+  openList.forEach(v=>{ const d=v.day||"—"; if(!byDay.has(d))byDay.set(d,[]); byDay.get(d).push(v); });
+  const days=[...byDay.keys()].sort((a,b)=>
+    Math.max(...byDay.get(b).map(lastNoteAt)) - Math.max(...byDay.get(a).map(lastNoteAt)));
+  let h="";
+  days.forEach(day=>{
+    const items=byDay.get(day).sort((a,b)=>lastNoteAt(b)-lastNoteAt(a));
+    h+=`<div class="fday"><span class="eyebrow">${esc(day)}</span> <span class="fcount">${items.length}</span></div>`;
+    items.forEach(v=>h+=noteCardHtml(v,false));
+  });
+  if(doneList.length){
+    h+=`<div class="talkdonehead"><span class="eyebrow">Done (${doneList.length})</span><span class="agrow"></span>`+
+       `<button class="btn sm" id="notesClearDone">Clear done</button></div>`;
+    doneList.sort((a,b)=>lastNoteAt(b)-lastNoteAt(a)).forEach(v=>h+=noteCardHtml(v,true));
+  }
+  el.innerHTML=h;
+}
+function noteCardHtml(v,done){
+  const where=[v.slotTime,v.slotLabel].filter(Boolean).join(" · ");
+  return `<div class="card notecard${done?" done":""}">`+
+    `<div class="nhead"><div><div class="nact">${esc(v.activity||"")}</div>`+
+      (where?`<div class="fmeta">${esc(where)}${done?"":""}</div>`:"")+`</div>`+
+      `<span class="agrow"></span>`+
+      (done?`<span class="fbadge ok">Done</span>`:"")+`</div>`+
+    `<div class="nnotes">`+v.notes.map(n=>
+      `<div class="nnote"><span class="ntext">${esc(n.text)}</span>`+
+      (n.at?`<span class="nwhen">${esc(noteTime(n.at))}</span>`:"")+
+      `<button class="nx" data-k="${esc(v.k)}" data-n="${esc(n.id)}" aria-label="Delete note">✕</button></div>`).join("")+
+    `</div>`+
+    `<div class="factions" style="margin-top:10px">`+
+      `<button class="btn sm nadd" data-k="${esc(v.k)}">＋ Add note</button>`+
+      `<button class="btn sm ndone" data-k="${esc(v.k)}">${done?"↩ Reopen":"✓ Mark done"}</button>`+
+      `<button class="btn sm ndel" data-k="${esc(v.k)}">Delete</button>`+
+    `</div></div>`;
 }
 
 /* ---------- ACTIVITY MATCHING ---------- */
