@@ -29,8 +29,11 @@ lets you **read a photo of the schedule** and have it filled in automatically.
   Finder uses rather than from the model's own arithmetic. It also sees the
   roster, attendance marks, your round notes, the speak-to list, rooming — and
   the **original schedule photo**, so it can answer about things that only exist
-  on the printed sheet (davening and meal times, locations, footnotes). Needs
-  the deployed site with an API key (see below).
+  on the printed sheet (davening and meal times, locations, footnotes). You can
+  also just tell it what you need — *"I need 3 people for the special activity
+  in the front of camp"* — and it proposes named staff who are actually free;
+  one tap turns that into a real coverage assignment, no need to add the
+  activity anywhere first. Needs the deployed site with an API key (see below).
 - **Activity matching** — schedule names rarely match the roster exactly. Obvious
   variants ("Wood Working", "Glass Fusion (DD Resin)", "Rope Corse") link
   themselves; anything genuinely uncertain is collected under **🔗 Matching**,

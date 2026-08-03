@@ -296,6 +296,15 @@
     background:var(--surface);color:var(--accent-strong);border-radius:20px;padding:7px 13px;
     cursor:pointer;text-align:left}
   .chatidea:hover{border-style:solid;border-color:var(--accent);background:var(--accent-wash)}
+  .proposal{align-self:flex-start;max-width:94%;border:1.5px solid var(--accent);border-radius:14px;
+    padding:12px 13px;background:var(--accent-wash)}
+  .proposal.applied{border-color:var(--free-line);background:var(--free-bg)}
+  .ptitle{font-family:var(--display);font-weight:600;font-size:15px}
+  .pwhen{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+  .ppeople{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .pname{font-size:12.5px;font-weight:650;background:var(--surface);border:1px solid var(--line);
+    border-radius:9px;padding:5px 10px}
+  .pdone{font-size:12.5px;font-weight:650;color:var(--free)}
   .chatbar{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
   .chatbar input{flex:1}
 
@@ -798,6 +807,10 @@ function defaultRoster(){return [
 const ALIAS={
  "ai 3d":"AI 3D","ai 3d & 3d printing":"AI 3D",
  "action track hiking":"Action Track Hiking","hiking":"Action Track Hiking","action track":"Action Track Hiking",
+ // one cell can run several crews at once
+ "swim/lake/fish":["Swim","Lake","Fishing"],"swim lake fish":["Swim","Lake","Fishing"],
+ "swim/lake":["Swim","Lake"],"lake/fish":["Lake","Fishing"],"fishing":"Fishing","lake":"Lake","swim":"Swim",
+ "sports: hockey":"Hockey","sports hockey":"Hockey","sports":"Hockey",
  "archery":"Archery",
  "arts & crafts":"Arts 'n Crafts","arts and crafts":"Arts 'n Crafts","arts 'n crafts":"Arts 'n Crafts","art":"Arts 'n Crafts",
  "baking":"Baking/Challah Baking","challah":"Baking/Challah Baking","challah baking":"Baking/Challah Baking","baking/challah baking":"Baking/Challah Baking",
@@ -826,7 +839,8 @@ const ALIAS={
  "day camp":"Day Camp",
 };
 /* activities that need coverage themselves (no assigned crew) */
-const SPECIAL=["clue","carnival","dodgeball","color war","concert","trip","chagigah","bbq","free play","swim gala"];
+const SPECIAL=["clue","carnival","dodgeball","color war","concert","trip","chagigah","bbq","free play","swim gala",
+ "special activity","front of camp","social hall","minute to win it","team building","teambuilding","super rotator"];
 const BREAKS=["lunch","breakfast","dinner","supper","seuda","rest","shachris","maariv","mincha","davening","learning"];
 
 function defaultSchedule(){return {
@@ -1043,6 +1057,12 @@ function strictBest(key,idx){
   return best;
 }
 function findWorkshop(name){ return state.roster.find(w=>w.name===name); }
+/* an activity can drive more than one workshop at once (e.g. "Swim/Lake/Fish") */
+function workshopHit(target){
+  const names=(Array.isArray(target)?target:[target]).filter(n=>findWorkshop(n));
+  if(!names.length) return {kind:"unknown",suggestions:[]};
+  return {kind:"workshop",name:names[0],names};
+}
 
 let _clsCache=new Map();
 function clearClassifyCache(){ _clsCache.clear(); }
@@ -1060,13 +1080,13 @@ function classifyUncached(act){
   const dec=state.aliases&&state.aliases[key];
   if(dec==="__none__") return {kind:"special",decided:true};
   if(dec==="__skip__") return {kind:"break",decided:true};
-  if(dec&&findWorkshop(dec)) return {kind:"workshop",name:dec,decided:true};
+  if(dec&&findWorkshop(dec)) return Object.assign(workshopHit(dec),{decided:true});
   // 2. exact matches
-  if(ALIAS[n]) return {kind:"workshop",name:ALIAS[n]};
+  if(ALIAS[n]) return workshopHit(ALIAS[n]);
   const idx=rosterIndex();
-  if(idx.byNorm[key]) return {kind:"workshop",name:idx.byNorm[key]};
-  if(ALIAS[key]) return {kind:"workshop",name:ALIAS[key]};
-  for(const k in ALIAS){ if(n.startsWith(k)) return {kind:"workshop",name:ALIAS[k]}; }
+  if(idx.byNorm[key]) return workshopHit(idx.byNorm[key]);
+  if(ALIAS[key]) return workshopHit(ALIAS[key]);
+  for(const k in ALIAS){ if(n.startsWith(k)) return workshopHit(ALIAS[k]); }
   // 3. known non-workshop activities
   if(SPECIAL.some(w=>n.includes(w))) return {kind:"special"};
   if(BREAKS.some(w=>n.includes(w))) return {kind:"break"};
@@ -1139,8 +1159,9 @@ function analyze(slot){
   const specials=[]; const unknowns=[];
   slot.entries.forEach(e=>{
     const c=classify(e.a);
-    if(c.kind==="workshop"){ if(!running.has(c.name)) running.set(c.name,new Set());
-      running.get(c.name).add(state.schedule.groups[e.g]??("Group "+e.g)); }
+    if(c.kind==="workshop"){
+      const grp=state.schedule.groups[e.g]??("Group "+e.g);
+      (c.names||[c.name]).forEach(wn=>{ if(!running.has(wn)) running.set(wn,new Set()); running.get(wn).add(grp); }); }
     else if(c.kind==="special"){ if(!specials.includes(e.a)) specials.push(e.a); }
     else if(c.kind==="unknown"){ if(!unknowns.includes(e.a)) unknowns.push(e.a); }
   });
@@ -1643,8 +1664,9 @@ function buildBriefing(){
   }
   return L.join("\n");
 }
-const CHAT_IDEAS=["Who's free in periods 1, 2 and 5?","Who's available the whole day?",
-  "What still needs coverage today?","Who runs Pottery?"];
+const CHAT_IDEAS=["I need 3 people for the special activity in the front of camp",
+  "Who's free in periods 1, 2 and 5?","Who's available the whole day?",
+  "What still needs coverage today?"];
 function renderChat(){
   const el=document.getElementById("chatLog"); if(!el)return;
   if(!chatMsgs.length){
@@ -1656,10 +1678,45 @@ function renderChat(){
       '<div class="chatideas">'+CHAT_IDEAS.map(q=>`<button class="chatidea">${esc(q)}</button>`).join("")+'</div></div>';
     return;
   }
-  el.innerHTML=chatMsgs.map(m=>
-    `<div class="bubble ${m.role}">${m.pending?'<span class="dots">Thinking…</span>':esc(m.content).replace(/\n/g,"<br>")}</div>`
-  ).join("");
+  el.innerHTML=chatMsgs.map((m,i)=>{
+    if(m.pending) return `<div class="bubble assistant"><span class="dots">Thinking…</span></div>`;
+    let h=m.content?`<div class="bubble ${m.role}">${esc(m.content).replace(/\n/g,"<br>")}</div>`:"";
+    (m.proposals||[]).forEach((p,j)=>{
+      const slot=state.schedule.slots[p.period-1];
+      const when=slot?((slot.time||"")+(slot.label?" · "+slot.label:"")):("period "+p.period+" (not found)");
+      h+=`<div class="proposal${p.applied?" applied":""}">`+
+        `<div class="ptitle">Cover: ${esc(p.activity)}</div>`+
+        `<div class="pwhen">${esc(when)}</div>`+
+        `<div class="ppeople">${p.people.map(n=>`<span class="pname">${esc(n)}</span>`).join("")||'<span class="anote">nobody proposed</span>'}</div>`+
+        (p.applied?`<div class="pdone">✓ ${esc(p.applied)}</div>`
+          :`<button class="btn primary sm papply" data-m="${i}" data-p="${j}">Assign these ${p.people.length}</button>`)+
+      `</div>`;
+    });
+    return h;
+  }).join("");
   el.scrollTop=el.scrollHeight;
+}
+/* Turn a proposal into a real coverage assignment, but only for people who are
+   genuinely free in that period — never trust the names blindly. */
+function applyProposal(mi,pi){
+  const m=chatMsgs[mi]; if(!m||!m.proposals)return;
+  const p=m.proposals[pi]; if(!p||p.applied)return;
+  const slot=state.schedule.slots[p.period-1];
+  if(!slot){ p.applied="Couldn't find that period."; renderChat(); return; }
+  const a=analyze(slot);
+  const pool=new Map();
+  [...a.free,...a.freeStanding].forEach(x=>pool.set(norm(x.name),x.name));
+  const taken=new Set(); assignmentsForSlot(slot.id).forEach(x=>x.people.forEach(n=>taken.add(n)));
+  const ok=[],bad=[];
+  p.people.forEach(n=>{
+    const real=pool.get(norm(n));
+    if(real&&!taken.has(real)&&!ok.includes(real)) ok.push(real); else bad.push(n);
+  });
+  const id=newAssignment(slot,p.activity);
+  ok.forEach(n=>toggleAssignee(id,n));
+  p.applied=`Assigned ${ok.length} to “${p.activity}” at ${slot.time||"that period"}`+
+    (bad.length?` · skipped ${bad.join(", ")} (not free or already assigned)`:"");
+  render(); renderChat();
 }
 async function sendChat(text){
   text=(text||"").trim(); if(!text)return;
@@ -1672,12 +1729,12 @@ async function sendChat(text){
       method:"POST",headers:{"content-type":"application/json"},
       body:JSON.stringify({briefing:buildBriefing(),
         image:(schedulePhoto&&schedulePhoto.img)||null,
-        messages:chatMsgs.filter(m=>!m.pending).map(m=>({role:m.role,content:m.content}))})
+        messages:chatMsgs.filter(m=>!m.pending&&m.content).map(m=>({role:m.role,content:m.content}))})
     });
     let d; try{d=await resp.json();}catch(_){d=null;}
     chatMsgs=chatMsgs.filter(m=>!m.pending);
     if(!resp.ok||!d||d.error) chatMsgs.push({role:"assistant",content:"⚠ "+((d&&d.error)||("Server error "+resp.status))});
-    else chatMsgs.push({role:"assistant",content:d.reply||"(no answer)"});
+    else chatMsgs.push({role:"assistant",content:d.reply||"",proposals:Array.isArray(d.proposals)?d.proposals:[]});
   }catch(err){
     chatMsgs=chatMsgs.filter(m=>!m.pending);
     chatMsgs.push({role:"assistant",content:"⚠ Couldn't reach the assistant. It works on the deployed site with an ANTHROPIC_API_KEY set in Vercel."});
@@ -2220,6 +2277,8 @@ document.getElementById("chatClear").onclick=()=>{ chatMsgs=[]; renderChat(); };
 document.getElementById("chatSend").onclick=()=>sendChat(document.getElementById("chatInput").value);
 document.getElementById("chatInput").onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); sendChat(e.target.value); } };
 document.getElementById("chatLog").addEventListener("click",e=>{
+  const ap=e.target.closest(".papply");
+  if(ap){ applyProposal(+ap.dataset.m,+ap.dataset.p); return; }
   const b=e.target.closest(".chatidea"); if(b) sendChat(b.textContent);
 });
 

@@ -84,10 +84,43 @@ RULES:
 - If a question can't be answered from the briefing, say what's missing rather than guessing.
 - If the briefing shows a WARNING about unmatched activity names, mention it when it affects the answer, because those staff are not counted as busy.
 - The briefing also carries attendance marks, the user's own round notes, their speak-to list, and the rooming list. Use them when asked.
+- When the user needs people to cover something, call the propose_coverage tool. It works for anything, including an activity that appears nowhere in the app — take the user's wording for it. Choose only names from that period's FREE list. If they don't say how many people, propose a sensible small number and say why. The user confirms before anything is saved, so make the proposal concrete rather than asking which names they want.
 ${hasImage ? `- A photo of the printed schedule sheet is attached to the question. The briefing stays authoritative for who is free or busy, but the photo is the place to look for anything the briefing lacks: davening, meal and bedtime times, locations, group names, footnotes, and anything handwritten. If the photo and the briefing disagree about an activity, say so — it usually means the schedule was typed in wrong.` : `- No photo of the schedule was provided. If asked about something only the printed sheet would show, say it isn't available and suggest uploading the photo on the Schedule tab.`}
 
 BRIEFING:
 ${briefing}`;
+
+    // Lets the user say "I need 3 people for the special activity at 2:15"
+    // without that activity having to exist anywhere in the app. Nothing is
+    // written by this call — the app asks the user to confirm first.
+    const tools = [
+      {
+        name: "propose_coverage",
+        description:
+          "Propose specific staff to cover an activity in one period. Use this whenever the user asks for people to cover something, including an activity that is not on the schedule at all. Pick people ONLY from that period's FREE lists in the briefing. Prefer free specialty staff; use standing crew only if there are not enough, and say so.",
+        input_schema: {
+          type: "object",
+          properties: {
+            period: {
+              type: "integer",
+              description: "Period number exactly as numbered in the briefing (1 = first period of the day).",
+            },
+            activity: {
+              type: "string",
+              description:
+                "What needs covering, e.g. 'Special Activity in the Front of Camp'. Copy the user's wording.",
+            },
+            people: {
+              type: "array",
+              items: { type: "string" },
+              description: "Names copied exactly from that period's FREE list.",
+            },
+            note: { type: "string", description: "One short sentence on why these people." },
+          },
+          required: ["period", "activity", "people"],
+        },
+      },
+    ];
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -96,7 +129,7 @@ ${briefing}`;
         "x-api-key": key,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({ model, max_tokens: 1200, system, messages }),
+      body: JSON.stringify({ model, max_tokens: 1200, system, tools, messages }),
     });
 
     if (!r.ok) {
@@ -109,13 +142,26 @@ ${briefing}`;
     }
 
     const j = await r.json();
-    const reply = (j.content || [])
+    const blocks = j.content || [];
+    const reply = blocks
       .filter((c) => c.type === "text")
       .map((c) => c.text)
       .join("\n")
       .trim();
+    const proposals = blocks
+      .filter((c) => c.type === "tool_use" && c.name === "propose_coverage" && c.input)
+      .map((c) => ({
+        period: c.input.period,
+        activity: String(c.input.activity || "").slice(0, 120),
+        people: Array.isArray(c.input.people) ? c.input.people.map(String) : [],
+        note: String(c.input.note || "").slice(0, 300),
+      }))
+      .filter((p) => p.activity && Number.isFinite(p.period));
 
-    res.status(200).json({ reply: reply || "(no answer)" });
+    res.status(200).json({
+      reply: reply || (proposals.length ? "" : "(no answer)"),
+      proposals,
+    });
   } catch (e) {
     res.status(500).json({ error: "Question failed: " + (e.message || String(e)) });
   }
