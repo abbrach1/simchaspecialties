@@ -22,6 +22,12 @@ lets you **read a photo of the schedule** and have it filled in automatically.
 - **Roster** — per-session staff lists. Add or remove people on the fly, add new
   workshops, and keep separate **sessions** (create / rename / duplicate / delete)
   so each camp session or year has its own roster.
+- **Ask** — a chat button on every screen for questions in plain English:
+  "who's free in periods 1, 2 and 5?", "who's available the whole day?", "what
+  still needs coverage?". The app computes the availability itself and hands the
+  assistant the finished figures, so the answers come from the same maths the
+  Finder uses rather than from the model's own arithmetic. Needs the deployed
+  site with an API key (see below).
 - **Activity matching** — schedule names rarely match the roster exactly. Obvious
   variants ("Wood Working", "Glass Fusion (DD Resin)", "Rope Corse") link
   themselves; anything genuinely uncertain is collected under **🔗 Matching**,

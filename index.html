@@ -266,6 +266,35 @@
   @media (min-width:720px){.roomgrid{grid-template-columns:1fr 1fr}}
   @media (min-width:1000px){.roomgrid{grid-template-columns:1fr 1fr 1fr}}
 
+  /* ask-ai */
+  .fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:70;
+    display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;font:inherit;
+    font-weight:700;font-size:14px;padding:12px 18px;border-radius:26px;
+    background:var(--brand);color:var(--brand-ink);box-shadow:0 6px 20px rgba(16,40,30,.34);
+    transition:.15s}
+  .fab:hover{background:var(--brand-2)}
+  .fab:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .fab svg{width:19px;height:19px;color:var(--accent)}
+  @media (min-width:720px){ .fab{bottom:24px;right:24px} }
+  .chatcard{height:min(640px,88vh)}
+  .chatlog{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:4px 2px 8px}
+  .bubble{max-width:88%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;
+    white-space:normal;overflow-wrap:anywhere}
+  .bubble.user{align-self:flex-end;background:var(--brand);color:var(--brand-ink);
+    border-bottom-right-radius:5px}
+  .bubble.assistant{align-self:flex-start;background:var(--surface-2);border:1px solid var(--line);
+    border-bottom-left-radius:5px}
+  .dots{color:var(--ink-faint);font-style:italic}
+  .chatempty{color:var(--ink-soft);font-size:13.5px;padding:6px 2px}
+  .chatempty p{margin:.2em 0 12px}
+  .chatideas{display:flex;flex-wrap:wrap;gap:7px}
+  .chatidea{font:inherit;font-size:12.5px;font-weight:600;border:1.5px dashed var(--line);
+    background:var(--surface);color:var(--accent-strong);border-radius:20px;padding:7px 13px;
+    cursor:pointer;text-align:left}
+  .chatidea:hover{border-style:solid;border-color:var(--accent);background:var(--accent-wash)}
+  .chatbar{display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+  .chatbar input{flex:1}
+
   /* notes tab */
   .notecard{padding:13px 14px;margin-bottom:10px}
   .notecard.done{opacity:.62}
@@ -660,6 +689,28 @@
   <div class="foot">
     Built for the Specialty Division · <b>Free</b> = not assigned to any workshop running in that slot.<br>
     Standing crews are shown separately since they hold fixed duties — pull them only if needed.
+  </div>
+</div>
+
+<button class="fab" id="askFab" aria-label="Ask the assistant">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 20.5l1.5-5.4A8.5 8.5 0 1 1 21 11.5z"></path></svg>
+  <span>Ask</span>
+</button>
+
+<div class="modal" id="chatModal" hidden>
+  <div class="modalcard chatcard">
+    <div class="modalhead">
+      <h3>Ask about today</h3>
+      <div style="display:flex;gap:7px">
+        <button class="btn sm" id="chatClear">Clear</button>
+        <button class="btn sm" id="chatClose">Close</button>
+      </div>
+    </div>
+    <div id="chatLog" class="chatlog"></div>
+    <div class="chatbar">
+      <input type="text" id="chatInput" placeholder="Who's free in periods 1, 2 and 5?" autocomplete="off">
+      <button class="btn primary" id="chatSend">Send</button>
+    </div>
   </div>
 </div>
 
@@ -1489,6 +1540,81 @@ function renderTalk(){
   return open.length;
 }
 
+/* ---------- ASK AI ----------
+   The availability maths is done here, not by the model: the briefing carries
+   already-computed free/busy lists (including who is free in every period), so
+   the AI only has to read the question and quote the right rows back. */
+let chatMsgs=[]; // in-memory only
+function buildBriefing(){
+  const L=[], people=allPeople();
+  L.push("DAY: "+(state.schedule.dayName||"(unnamed)"));
+  L.push("PEOPLE ON ROSTER: "+people.size);
+  L.push("");
+  L.push("PERIODS, numbered in schedule order (period 1 = first activity of the day):");
+  const freeSets=[];
+  state.schedule.slots.forEach((s,i)=>{
+    const a=analyze(s);
+    freeSets.push(new Set(a.free.map(p=>p.name)));
+    L.push(`PERIOD ${i+1}: ${s.time||"(no time set)"}${s.label?" — "+s.label:""}`);
+    if(a.specials.length) L.push("  Special activities needing coverage: "+a.specials.join(", "));
+    L.push("  Workshops running: "+([...a.running.keys()].sort().join(", ")||"none"));
+    L.push(`  FREE specialty staff (${a.free.length}): `+(a.free.map(p=>p.name).join(", ")||"nobody"));
+    L.push(`  FREE standing crew, has fixed duties (${a.freeStanding.length}): `+(a.freeStanding.map(p=>p.name).join(", ")||"nobody"));
+    const busy=[...a.busy.entries()].sort((x,y)=>x[0].localeCompare(y[0]))
+      .map(([w,pp])=>w+" ("+pp.map(p=>p.name).join(", ")+")");
+    L.push("  BUSY: "+(busy.join("; ")||"nobody"));
+    const asg=assignmentsForSlot(s.id);
+    if(asg.length) L.push("  Coverage already assigned: "+asg.map(x=>x.activity+" -> "+(x.people.join(", ")||"nobody yet")).join("; "));
+    if(a.unknowns.length) L.push("  WARNING, unmatched activity names so their staff are not counted busy: "+a.unknowns.join(", "));
+  });
+  if(freeSets.length){
+    const allDay=[...freeSets[0]].filter(n=>freeSets.every(st=>st.has(n))).sort();
+    L.push("");
+    L.push(`FREE IN EVERY PERIOD, i.e. available the whole day (${allDay.length}): `+(allDay.join(", ")||"nobody"));
+  }
+  L.push("");
+  L.push("ROSTER (workshop: staff):");
+  state.roster.forEach(w=>L.push("- "+w.name+(w.type==="standing"?" [standing crew]":"")+": "+
+    (w.people.map(p=>p[0]+(p[1]===H?" (head)":"")).join(", ")||"nobody assigned")));
+  return L.join("\n");
+}
+const CHAT_IDEAS=["Who's free in periods 1, 2 and 5?","Who's available the whole day?",
+  "What still needs coverage today?","Who runs Pottery?"];
+function renderChat(){
+  const el=document.getElementById("chatLog"); if(!el)return;
+  if(!chatMsgs.length){
+    el.innerHTML='<div class="chatempty"><p>Ask about who\'s free, what needs coverage, or who runs what — it reads today\'s schedule and roster.</p>'+
+      '<div class="chatideas">'+CHAT_IDEAS.map(q=>`<button class="chatidea">${esc(q)}</button>`).join("")+'</div></div>';
+    return;
+  }
+  el.innerHTML=chatMsgs.map(m=>
+    `<div class="bubble ${m.role}">${m.pending?'<span class="dots">Thinking…</span>':esc(m.content).replace(/\n/g,"<br>")}</div>`
+  ).join("");
+  el.scrollTop=el.scrollHeight;
+}
+async function sendChat(text){
+  text=(text||"").trim(); if(!text)return;
+  const box=document.getElementById("chatInput"); if(box) box.value="";
+  chatMsgs.push({role:"user",content:text});
+  chatMsgs.push({role:"assistant",content:"",pending:true});
+  renderChat();
+  try{
+    const resp=await fetch("/api/ask",{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({briefing:buildBriefing(),
+        messages:chatMsgs.filter(m=>!m.pending).map(m=>({role:m.role,content:m.content}))})
+    });
+    let d; try{d=await resp.json();}catch(_){d=null;}
+    chatMsgs=chatMsgs.filter(m=>!m.pending);
+    if(!resp.ok||!d||d.error) chatMsgs.push({role:"assistant",content:"⚠ "+((d&&d.error)||("Server error "+resp.status))});
+    else chatMsgs.push({role:"assistant",content:d.reply||"(no answer)"});
+  }catch(err){
+    chatMsgs=chatMsgs.filter(m=>!m.pending);
+    chatMsgs.push({role:"assistant",content:"⚠ Couldn't reach the assistant. It works on the deployed site with an ANTHROPIC_API_KEY set in Vercel."});
+  }
+  renderChat();
+}
+
 /* ---------- NOTES (every visit note, across all days) ---------- */
 function noteEntries(){
   return Object.entries(state.visits||{})
@@ -2011,6 +2137,20 @@ schedView.addEventListener("change",e=>{
   }
 });
 function refreshFinder(){renderSlotList();renderResult();}
+/* ask-ai chat */
+document.getElementById("askFab").onclick=()=>{
+  document.getElementById("chatModal").hidden=false; renderChat();
+  const i=document.getElementById("chatInput"); if(i&&window.innerWidth>720) i.focus();
+};
+document.getElementById("chatClose").onclick=()=>{document.getElementById("chatModal").hidden=true;};
+document.getElementById("chatModal").onclick=e=>{ if(e.target.id==="chatModal") e.currentTarget.hidden=true; };
+document.getElementById("chatClear").onclick=()=>{ chatMsgs=[]; renderChat(); };
+document.getElementById("chatSend").onclick=()=>sendChat(document.getElementById("chatInput").value);
+document.getElementById("chatInput").onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); sendChat(e.target.value); } };
+document.getElementById("chatLog").addEventListener("click",e=>{
+  const b=e.target.closest(".chatidea"); if(b) sendChat(b.textContent);
+});
+
 /* activity matcher */
 document.getElementById("matchClose").onclick=()=>{document.getElementById("matchModal").hidden=true;};
 document.getElementById("matchModal").onclick=e=>{ if(e.target.id==="matchModal") e.currentTarget.hidden=true; };
