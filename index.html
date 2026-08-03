@@ -267,6 +267,10 @@
   @media (min-width:1000px){.roomgrid{grid-template-columns:1fr 1fr 1fr}}
 
   /* ask-ai */
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;
+    background:var(--surface-2);border:1px solid var(--line);color:var(--ink-soft)}
+  .pill.ok{background:var(--free-bg);border-color:var(--free-line);color:var(--free)}
+  .photostate{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
   .fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:70;
     display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;font:inherit;
     font-weight:700;font-size:14px;padding:12px 18px;border-radius:26px;
@@ -568,6 +572,7 @@
       <input type="file" id="photoInput" accept="image/*" style="display:none">
     </div>
     <div id="photoStatus" style="margin-bottom:12px"></div>
+    <div id="photoState" class="photostate"></div>
     <div id="schedView"></div>
     <datalist id="actOptions"></datalist>
     <details class="imp">
@@ -1161,7 +1166,7 @@ function analyze(slot){
 /* ---------- RENDER: FINDER ---------- */
 function render(){
   document.getElementById("dayName").textContent=state.schedule.dayName||"Today";
-  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster(); renderFollowups(); renderNotes(); renderRooming();
+  renderSessionBar(); renderSlotList(); renderResult(); renderSchedule(); renderRoster(); renderFollowups(); renderNotes(); renderRooming(); renderPhotoState();
 }
 /* attendance clicks on the Finder result (container persists across re-renders) */
 document.getElementById("result").addEventListener("click",e=>{
@@ -1540,6 +1545,37 @@ function renderTalk(){
   return open.length;
 }
 
+/* ---------- SCHEDULE PHOTO ----------
+   Kept in its own storage key and its own synced document: a base64 photo is
+   far too big to sit inside the main state blob, which has to stay under
+   Firestore's 1MB document limit. */
+const PHOTO_LS="campSimchaPhoto_v1";
+let schedulePhoto=(function(){try{const r=localStorage.getItem(PHOTO_LS);return r?JSON.parse(r):null}catch(e){return null}})();
+function savePhoto(p){
+  schedulePhoto=p;
+  try{ localStorage.setItem(PHOTO_LS,JSON.stringify(p)); }catch(e){ /* too big to keep; still usable this session */ }
+  if(window.__photoPush) window.__photoPush();
+  renderPhotoState();
+}
+function clearPhoto(){
+  schedulePhoto=null;
+  try{ localStorage.removeItem(PHOTO_LS); }catch(e){}
+  renderPhotoState();
+}
+window.__getPhoto=()=>schedulePhoto;
+window.__applyPhoto=(p)=>{ if(!p||!p.img)return; schedulePhoto=p;
+  try{ localStorage.setItem(PHOTO_LS,JSON.stringify(p)); }catch(e){}
+  renderPhotoState(); };
+function renderPhotoState(){
+  const el=document.getElementById("photoState"); if(!el)return;
+  el.innerHTML=schedulePhoto&&schedulePhoto.img
+    ? `<span class="pill ok">📷 Schedule photo saved${schedulePhoto.day?" · "+esc(schedulePhoto.day):""}</span>`+
+      `<button class="btn sm" id="photoClearBtn">Remove</button>`
+    : `<span class="pill">No schedule photo yet — upload one so the assistant can read the original.</span>`;
+  const b=document.getElementById("photoClearBtn");
+  if(b) b.onclick=()=>{ if(confirm("Remove the saved schedule photo?")) clearPhoto(); };
+}
+
 /* ---------- ASK AI ----------
    The availability maths is done here, not by the model: the briefing carries
    already-computed free/busy lists (including who is free in every period), so
@@ -1573,9 +1609,38 @@ function buildBriefing(){
     L.push(`FREE IN EVERY PERIOD, i.e. available the whole day (${allDay.length}): `+(allDay.join(", ")||"nobody"));
   }
   L.push("");
-  L.push("ROSTER (workshop: staff):");
-  state.roster.forEach(w=>L.push("- "+w.name+(w.type==="standing"?" [standing crew]":"")+": "+
+  L.push("ROSTER (workshop: staff) — session: "+(state.activeSession||"?"));
+  state.roster.forEach(w=>L.push("- "+w.name+(w.type==="standing"?" [standing crew]":"")+
+    (w.loc&&w.loc!=="—"?" @"+w.loc:"")+": "+
     (w.people.map(p=>p[0]+(p[1]===H?" (head)":"")).join(", ")||"nobody assigned")));
+
+  const att=Object.values(state.attendance||{});
+  if(att.length){
+    L.push("");
+    L.push("STAFF ATTENDANCE MARKED:");
+    att.forEach(v=>L.push(`- ${v.person} at ${v.workshop||"?"} (${v.day||""} ${v.slotTime||""}): `+
+      (v.status==="came"?"came":v.status==="no"?"NO-SHOW":"noted")+(v.note?" — "+v.note:"")));
+  }
+  const rounds=Object.values(state.visits||{});
+  if(rounds.length){
+    L.push("");
+    L.push("MY ROUNDS — activities visited and notes:");
+    rounds.forEach(v=>L.push(`- ${v.activity} (${v.day||""} ${v.slotTime||""}): `+
+      (v.visited?"visited":"not marked visited")+(v.done?" [done]":"")+
+      ((v.notes||[]).length?" — notes: "+v.notes.map(n=>n.text).join(" | "):"")));
+  }
+  const talk=(state.talkList||[]).filter(t=>!t.done);
+  if(talk.length){
+    L.push("");
+    L.push("PEOPLE I STILL NEED TO SPEAK TO:");
+    talk.forEach(t=>L.push("- "+t.name+(t.note?" — "+t.note:"")));
+  }
+  if((state.rooming||[]).length){
+    L.push("");
+    L.push("ROOMING (room: who sleeps there):");
+    roomsGrouped().forEach(g=>L.push(`- ${g.room==="—"?"Unassigned":"Room "+g.room}: `+
+      g.people.map(p=>personDisplay(p)+(p.type==="Ops"?" (Ops)":"")).join(", ")));
+  }
   return L.join("\n");
 }
 const CHAT_IDEAS=["Who's free in periods 1, 2 and 5?","Who's available the whole day?",
@@ -1583,7 +1648,11 @@ const CHAT_IDEAS=["Who's free in periods 1, 2 and 5?","Who's available the whole
 function renderChat(){
   const el=document.getElementById("chatLog"); if(!el)return;
   if(!chatMsgs.length){
-    el.innerHTML='<div class="chatempty"><p>Ask about who\'s free, what needs coverage, or who runs what — it reads today\'s schedule and roster.</p>'+
+    const pic=schedulePhoto&&schedulePhoto.img
+      ? '<span class="pill ok">📷 Your schedule photo is attached — it can read the original sheet too</span>'
+      : '<span class="pill">No schedule photo saved. Upload one on the Schedule tab and it can read the original sheet.</span>';
+    el.innerHTML='<div class="chatempty"><p>Ask about who\'s free, what needs coverage, notes, rooming, or who runs what.</p>'+
+      '<div style="margin-bottom:12px">'+pic+'</div>'+
       '<div class="chatideas">'+CHAT_IDEAS.map(q=>`<button class="chatidea">${esc(q)}</button>`).join("")+'</div></div>';
     return;
   }
@@ -1602,6 +1671,7 @@ async function sendChat(text){
     const resp=await fetch("/api/ask",{
       method:"POST",headers:{"content-type":"application/json"},
       body:JSON.stringify({briefing:buildBriefing(),
+        image:(schedulePhoto&&schedulePhoto.img)||null,
         messages:chatMsgs.filter(m=>!m.pending).map(m=>({role:m.role,content:m.content}))})
     });
     let d; try{d=await resp.json();}catch(_){d=null;}
@@ -2054,6 +2124,7 @@ photoInput.onchange=async e=>{
   try{
     set("📷 Shrinking the photo…");
     const dataUrl=await downscaleImage(file,1600,0.82);
+    savePhoto({img:dataUrl,day:state.schedule.dayName||"",at:Date.now()});
     set("🤖 Reading the schedule from the photo… this takes a few seconds.");
     const resp=await fetch("/api/parse-schedule",{
       method:"POST",headers:{"content-type":"application/json"},
@@ -2071,6 +2142,7 @@ photoInput.onchange=async e=>{
     if(!Array.isArray(d.groups)||!d.groups.length) d.groups=state.schedule.groups;
     state.schedule={dayName:d.dayName||state.schedule.dayName,groups:d.groups,slots:d.slots};
     selectedSlot=d.slots[0]&&d.slots[0].id;
+    savePhoto({img:dataUrl,day:d.dayName||state.schedule.dayName||"",at:Date.now()});
     scheduleEditMode=true; // drop them into edit mode to review/fix
     save(); render();
     set("✓ Loaded from the photo. <b>Please look it over</b> and fix any misread cells, then press ✓ Done editing.","");
@@ -2344,6 +2416,33 @@ if(db){
     setSync("wait","Saving…");
     clearTimeout(pushTimer);
     pushTimer=setTimeout(pushNow, 600);
+  };
+
+  /* The schedule photo lives in its own document: base64 images are far too
+     large to sit inside the state blob, which must stay under Firestore's 1MB
+     document limit. */
+  const pref=doc(db,"appState","photo-cssb");
+  const PHOTO_MAX=800000;
+  let lastPhoto=null, photoApplying=false, photoTimer=null;
+  onSnapshot(pref, snap=>{
+    if(!snap.exists()) return;
+    const d=snap.data(); if(!d||!d.img||d.img===lastPhoto) return;
+    lastPhoto=d.img;
+    photoApplying=true;
+    try{ window.__applyPhoto && window.__applyPhoto({img:d.img,day:d.day||"",at:d.at||0}); }
+    finally{ photoApplying=false; }
+  }, err=>{ console.warn("photo sync listen error:",err); });
+  window.__photoPush=()=>{
+    if(photoApplying) return;
+    clearTimeout(photoTimer);
+    photoTimer=setTimeout(async()=>{
+      const p=window.__getPhoto && window.__getPhoto();
+      if(!p||!p.img||p.img===lastPhoto) return;
+      if(p.img.length>PHOTO_MAX){ console.warn("schedule photo too large to sync; kept on this device only"); return; }
+      lastPhoto=p.img;
+      try{ await setDoc(pref,{img:p.img,day:p.day||"",at:p.at||0}); }
+      catch(e){ console.warn("photo sync write failed:",e); lastPhoto=null; }
+    }, 1500);
   };
 }
 </script>

@@ -26,8 +26,11 @@ lets you **read a photo of the schedule** and have it filled in automatically.
   "who's free in periods 1, 2 and 5?", "who's available the whole day?", "what
   still needs coverage?". The app computes the availability itself and hands the
   assistant the finished figures, so the answers come from the same maths the
-  Finder uses rather than from the model's own arithmetic. Needs the deployed
-  site with an API key (see below).
+  Finder uses rather than from the model's own arithmetic. It also sees the
+  roster, attendance marks, your round notes, the speak-to list, rooming — and
+  the **original schedule photo**, so it can answer about things that only exist
+  on the printed sheet (davening and meal times, locations, footnotes). Needs
+  the deployed site with an API key (see below).
 - **Activity matching** — schedule names rarely match the roster exactly. Obvious
   variants ("Wood Working", "Glass Fusion (DD Resin)", "Rope Corse") link
   themselves; anything genuinely uncertain is collected under **🔗 Matching**,

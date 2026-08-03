@@ -29,6 +29,7 @@ export default async function handler(req, res) {
     if (typeof body === "string") body = JSON.parse(body || "{}");
     const briefing = (body && body.briefing) || "";
     const incoming = (body && body.messages) || [];
+    const image = (body && body.image) || null;
 
     if (!briefing) {
       res.status(400).json({ error: "No schedule information was sent." });
@@ -52,6 +53,21 @@ export default async function handler(req, res) {
       return;
     }
 
+    // attach the photo of the printed schedule to the newest question, so the
+    // model can read anything the briefing doesn't carry
+    let hasImage = false;
+    if (image) {
+      const m = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/s.exec(image);
+      if (m) {
+        hasImage = true;
+        const last = messages[messages.length - 1];
+        last.content = [
+          { type: "image", source: { type: "base64", media_type: m[1], data: m[2] } },
+          { type: "text", text: last.content },
+        ];
+      }
+    }
+
     const model = process.env.PARSE_MODEL || "claude-sonnet-4-6";
 
     const system = `You help the head of the Specialty Division at Camp Simcha. Your job is to answer questions about staff availability and today's schedule.
@@ -67,6 +83,8 @@ RULES:
 - Be brief and practical. Prefer short labelled lists over prose. Give counts alongside names. Plain text only, no markdown formatting or tables.
 - If a question can't be answered from the briefing, say what's missing rather than guessing.
 - If the briefing shows a WARNING about unmatched activity names, mention it when it affects the answer, because those staff are not counted as busy.
+- The briefing also carries attendance marks, the user's own round notes, their speak-to list, and the rooming list. Use them when asked.
+${hasImage ? `- A photo of the printed schedule sheet is attached to the question. The briefing stays authoritative for who is free or busy, but the photo is the place to look for anything the briefing lacks: davening, meal and bedtime times, locations, group names, footnotes, and anything handwritten. If the photo and the briefing disagree about an activity, say so — it usually means the schedule was typed in wrong.` : `- No photo of the schedule was provided. If asked about something only the printed sheet would show, say it isn't available and suggest uploading the photo on the Schedule tab.`}
 
 BRIEFING:
 ${briefing}`;
